@@ -1,0 +1,285 @@
+/* ===== RESET & BASE STYLES ===== */
+
+/* Verwijder alle browser-inconsistenties */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* HTML mag scrollen */
+html, body {
+  width: 100%;
+  min-height: 100%;
+  background: #eef3fb; /* zachte neutrale website achtergrond */
+  font-family: Inter, system-ui, sans-serif;
+  overflow-x: hidden; /* geen horizontaal scrollen */
+}
+
+/* Zorgt ervoor dat de pagina's automatisch scrollbaar blijven */
+body {
+  display: block;          /* heel belangrijk — GEEN flex! */
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  color: #1c1c1c;
+}
+
+/* Links */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Buttons standaard consistent */
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Forms consistent */
+input, select {
+  font-family: inherit;
+}
+
+/* Tabellen nette baseline */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 0.6rem;
+  text-align: left;
+}
+
+/* Utility classes */
+.center {
+  text-align: center;
+}
+
+.admin-container {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+.admin-menu {
+  width: 240px;
+  background: white;
+  border-right: 1px solid #ddd;
+  padding: 20px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.admin-menu a {
+  display: block;
+  margin-bottom: 12px;
+  text-decoration: none;
+  color: #004aad;
+  font-weight: 500;
+}
+
+.admin-menu a:hover {
+  color: #001f5c;
+}
+
+.admin-content {
+  flex: 1;
+  padding: 30px;
+}
+
+/* ADMIN LAYOUT */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+.admin-content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.admin-title {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: #003366;
+}
+
+/* STATISTIEKEN GRID */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.stat-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  transition: transform .15s;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+}
+
+.stat-card h3 {
+  margin-bottom: 0.5rem;
+  color: #444;
+}
+
+.stat-card p {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #004aad;
+}
+
+.admin-filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-filters select,
+.admin-filters input {
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.text-green {
+  color: green;
+  font-weight: bold;
+}
+
+.text-red {
+  color: #d33;
+  font-weight: bold;
+}
+
+.pagination {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.pagination button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #004aad;
+  color: white;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+/* ✅ Vast menu links */
+.admin-menu {
+  width: 260px;
+  background: white;
+  padding: 1.5rem;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
+  position: fixed;       /* <-- vaste positie */
+  top: 0;
+  left: 0;
+  height: 100vh;         /* volledige hoogte */
+  overflow-y: auto;      /* scrollbaar bij teveel items */
+  z-index: 10;
+}
+
+/* ✅ Content schuift opzij omdat menu fixed is */
+.admin-content {
+  margin-left: 260px;    /* ruimte voor het menu */
+  padding: 2rem;
+  width: calc(100% - 260px);
+}
+
+.admin-nav a {
+  display: block;
+  padding: 0.8rem 0.6rem;
+  text-decoration: none;
+  color: #004;
+  font-weight: 500;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  transition: 0.2s;
+}
+
+.admin-nav a:hover {
+  background: #e8f0ff;
+}
+
+.admin-search {
+  padding: 0.7rem;
+  width: 280px;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.admin-select {
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.admin-btn {
+  background: #004aad;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.admin-empty {
+  text-align: center;
+  padding: 20px;
+  color: #777;
+}
+
+.admin-pagination {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  align-items: center;
+}
+
+.admin-page-btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #888;
+  cursor: pointer;
+}
