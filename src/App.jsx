@@ -1,6 +1,7 @@
+// src/App.jsx
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
 
@@ -26,13 +27,25 @@ import AdminImportExport from "./components/Admin/AdminImportExport";
 import AdminLogboek from "./components/Admin/AdminLogboek";
 import AdminInstellingen from "./components/Admin/AdminInstellingen";
 
+// =======================
+// Admin route wrapper
+// =======================
+function AdminRoute({ role, children }) {
+  return role === "admin" ? children : <Navigate to="/" replace />;
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState("");
   const [profileCompleted, setProfileCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Hoe lang een gebruiker ingelogd mag blijven zonder activiteit (ms)
+  const INACTIVITY_TIMEOUT = 7.5 * 30 * 500; // 7,5 minuten
+
+  // =======================
   // Auth observer
+  // =======================
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
@@ -45,6 +58,9 @@ export default function App() {
           const data = snap.data();
           setRole(data.role || "user");
           setProfileCompleted(data.profile_completed || false);
+        } else {
+          setRole("user");
+          setProfileCompleted(false);
         }
       } else {
         setUser(null);
@@ -58,38 +74,81 @@ export default function App() {
     return () => unsub();
   }, []);
 
+  // =======================
+  // Auto-logout bij inactiviteit
+  // =======================
+  useEffect(() => {
+    // Alleen als iemand is ingelogd
+    if (!user) return;
+
+    let timerId;
+
+    const resetTimer = () => {
+      if (timerId) clearTimeout(timerId);
+
+      timerId = setTimeout(() => {
+        console.log("Geen activiteit, gebruiker wordt automatisch uitgelogd.");
+        signOut(auth); // Dit triggert onAuthStateChanged → user wordt null → redirect naar /login
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+
+    events.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    // Start de eerste timer
+    resetTimer();
+
+    // Cleanup
+    return () => {
+      if (timerId) clearTimeout(timerId);
+      events.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [user, INACTIVITY_TIMEOUT]);
+
+  // =======================
+  // Rendering
+  // =======================
   if (loading) return <p style={{ padding: 20 }}>⏳ Laden...</p>;
 
-  // Niet ingelogd → toon login
-  if (!user)
+  // Niet ingelogd → toon login / register en redirect alles naar /login
+  if (!user) {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        {/* alles anders naar /login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
+  }
 
-  // Profiel incomplete
-  if (!profileCompleted) return <ProfielAanvullen user={user} />;
+  // Profiel nog niet compleet → eerst profiel aanvullen
+  if (!profileCompleted) {
+    return <ProfielAanvullen user={user} />;
+  }
 
-  // Admin beveiliging
-  const AdminRoute = ({ children }) =>
-    role === "admin" ? children : <Navigate to="/" replace />;
-
+  // Ingelogd en profiel compleet
   return (
     <Routes>
       {/* Gebruikersroutes */}
       <Route path="/" element={<Dashboard user={user} role={role} />} />
       <Route path="/shop" element={<Shop user={user} />} />
       <Route path="/instellingen" element={<Settings user={user} />} />
-      <Route path="/registratie" element={<RegistratieFormulier user={user} />} />
+      <Route
+        path="/registratie"
+        element={<RegistratieFormulier user={user} />}
+      />
 
-      {/* Admin */}
+      {/* Admin-routes */}
       <Route
         path="/admin"
         element={
-          <AdminRoute>
+          <AdminRoute role={role}>
             <AdminDashboard user={user} />
           </AdminRoute>
         }
@@ -98,7 +157,7 @@ export default function App() {
       <Route
         path="/admin/users"
         element={
-          <AdminRoute>
+          <AdminRoute role={role}>
             <AdminUsers user={user} />
           </AdminRoute>
         }
@@ -107,7 +166,7 @@ export default function App() {
       <Route
         path="/admin/registraties"
         element={
-          <AdminRoute>
+          <AdminRoute role={role}>
             <AdminRegistraties user={user} />
           </AdminRoute>
         }
@@ -116,7 +175,7 @@ export default function App() {
       <Route
         path="/admin/producten"
         element={
-          <AdminRoute>
+          <AdminRoute role={role}>
             <AdminProducten user={user} />
           </AdminRoute>
         }
@@ -125,7 +184,7 @@ export default function App() {
       <Route
         path="/admin/punten"
         element={
-          <AdminRoute>
+          <AdminRoute role={role}>
             <AdminPunten user={user} />
           </AdminRoute>
         }
@@ -134,7 +193,7 @@ export default function App() {
       <Route
         path="/admin/koppelingen"
         element={
-          <AdminRoute>
+          <AdminRoute role={role}>
             <AdminKoppelen user={user} />
           </AdminRoute>
         }
@@ -143,7 +202,7 @@ export default function App() {
       <Route
         path="/admin/importexport"
         element={
-          <AdminRoute>
+          <AdminRoute role={role}>
             <AdminImportExport user={user} />
           </AdminRoute>
         }
@@ -152,7 +211,7 @@ export default function App() {
       <Route
         path="/admin/logboek"
         element={
-          <AdminRoute>
+          <AdminRoute role={role}>
             <AdminLogboek user={user} />
           </AdminRoute>
         }
@@ -161,12 +220,13 @@ export default function App() {
       <Route
         path="/admin/instellingen"
         element={
-          <AdminRoute>
+          <AdminRoute role={role}>
             <AdminInstellingen user={user} />
           </AdminRoute>
         }
       />
 
+      {/* Onbekende route → naar dashboard */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
