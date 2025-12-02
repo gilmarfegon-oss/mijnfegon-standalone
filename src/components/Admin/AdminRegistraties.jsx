@@ -1,236 +1,263 @@
-import React, { useEffect, useState } from "react";
+// src/components/Admin/AdminRegistraties.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { db } from "../../firebase";
 import {
   collection,
-  query,
-  where,
-  onSnapshot,
   doc,
+  onSnapshot,
+  query,
+  orderBy,
   updateDoc,
-  getDoc,
-  deleteDoc,
+  serverTimestamp,
 } from "firebase/firestore";
-import { db } from "../../firebase";
-import AdminMenu from "./AdminMenu";
-import { sendEmail } from "../../services/mailService"; // ← mail engine
 
-export default function AdminRegistraties() {
+export default function AdminRegistraties({ user }) {
   const [registraties, setRegistraties] = useState([]);
+  const [filterStatus, setFilterStatus] = useState("all"); // all | pending | approved | rejected
+  const [melding, setMelding] = useState("");
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("pending"); // pending | approved | rejected
-  const [search, setSearch] = useState("");
 
+  // 🔹 Realtime registraties ophalen
   useEffect(() => {
-    const q = collection(db, "registrations");
+    const ref = collection(db, "registrations");
 
-    const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setRegistraties(list);
-      setLoading(false);
-    });
+    const q = query(ref, orderBy("createdAt", "desc"));
+
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setRegistraties(list);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("AdminRegistraties onSnapshot error:", error.code, error.message);
+        setMelding(
+          "❌ Kan registraties niet laden (onvoldoende rechten of netwerkprobleem)."
+        );
+        setLoading(false);
+      }
+    );
 
     return () => unsub();
   }, []);
 
-  function filtered() {
-    return registraties
-      .filter((r) => (filter ? r.status === filter : true))
-      .filter((r) =>
-        (r.customer_email || "")
-          .toLowerCase()
-          .includes(search.toLowerCase())
-      );
-  }
+  const showMelding = (text) => {
+    setMelding(text);
+    if (text) {
+      setTimeout(() => setMelding(""), 4000);
+    }
+  };
 
-  async function approve(reg) {
+  // 🔹 Registratie goedkeuren
+  async function approveRegistration(reg) {
     try {
-      // Update registratie
-      await updateDoc(doc(db, "registrations", reg.id), {
+      const ref = doc(db, "registrations", reg.id);
+      await updateDoc(ref, {
         status: "approved",
-        reviewedAt: new Date(),
+        approvedAt: serverTimestamp(),
+        approvedBy: user ? user.uid : null,
       });
-
-      // Punten toekennen aan installateur (indien gewenst)
-      if (reg.installer_uid && reg.points > 0) {
-        const userRef = doc(db, "users", reg.installer_uid);
-        const snap = await getDoc(userRef);
-
-        if (snap.exists()) {
-          const prev = snap.data().points_total ?? 0;
-          await updateDoc(userRef, {
-            points_total: prev + reg.points,
-          });
-        }
-      }
-
-      // Stuur mails
-      await sendEmail("customer_approved", reg.customer_email, {
-        customer_name: reg.customer_name,
-        product_name: reg.product_name,
-      });
-
-      if (reg.installer_email) {
-        await sendEmail("installer_approved", reg.installer_email, {
-          installer_name: reg.installer_name || "",
-          product_name: reg.product_name,
-          customer_name: reg.customer_name,
-        });
-      }
-
-      alert("Registratie goedgekeurd!");
-
+      showMelding("✅ Registratie goedgekeurd.");
     } catch (err) {
-      console.error(err);
-      alert("Fout bij goedkeuren.");
+      console.error("approveRegistration error:", err);
+      showMelding("❌ Fout bij goedkeuren: " + err.message);
     }
   }
 
-  async function reject(reg) {
-    const reason = prompt("Reden van afkeuren:");
-
-    if (!reason) {
-      alert("Je moet een reden invullen.");
-      return;
-    }
+  // 🔹 Registratie afwijzen
+  async function rejectRegistration(reg) {
+    const reason = window.prompt(
+      "Optioneel: reden van afwijzing (wordt opgeslagen bij de registratie):"
+    );
 
     try {
-      await updateDoc(doc(db, "registrations", reg.id), {
+      const ref = doc(db, "registrations", reg.id);
+      await updateDoc(ref, {
         status: "rejected",
-        rejected_reason: reason,
-        reviewedAt: new Date(),
+        rejectedAt: serverTimestamp(),
+        rejectedBy: user ? user.uid : null,
+        rejectedReason: reason || null,
       });
-
-      await sendEmail("installer_rejected", reg.installer_email, {
-        installer_name: reg.installer_name || "",
-        product_name: reg.product_name,
-        reason,
-      });
-
-      alert("Registratie afgekeurd.");
-
+      showMelding("⚠️ Registratie afgewezen.");
     } catch (err) {
-      console.error(err);
-      alert("Fout bij afkeuren.");
+      console.error("rejectRegistration error:", err);
+      showMelding("❌ Fout bij afwijzen: " + err.message);
     }
   }
 
-  async function remove(reg) {
-    if (!window.confirm("Weet je zeker dat je deze registratie wilt verwijderen?")) return;
-    await deleteDoc(doc(db, "registrations", reg.id));
-  }
+  // 🔹 Gefilterde lijst
+  const gefilterd = useMemo(() => {
+    if (filterStatus === "all") return registraties;
+    return registraties.filter((r) => (r.status || "pending") === filterStatus);
+  }, [registraties, filterStatus]);
 
   return (
-    <div className="admin-layout">
-      <AdminMenu />
+    <div style={styles.page}>
+      <h1>🗂️ Admin – Registraties</h1>
+      <p style={{ color: "#555" }}>
+        Overzicht van alle ingediende registraties (installateurs / klanten / aanvragen).
+      </p>
 
-      <div className="admin-content">
-        <h1>📄 Registratiebeheer</h1>
+      {/* Filters */}
+      <div style={styles.filterRow}>
+        <span>Status filter:</span>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          style={styles.select}
+        >
+          <option value="all">Alle</option>
+          <option value="pending">Openstaand</option>
+          <option value="approved">Goedgekeurd</option>
+          <option value="rejected">Afgewezen</option>
+        </select>
+      </div>
 
-        {/* Filters */}
-        <div className="admin-filters" style={{ marginBottom: "1rem" }}>
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option value="pending">⏳ Wachtend</option>
-            <option value="approved">✅ Goedgekeurd</option>
-            <option value="rejected">❌ Afgekeurd</option>
-            <option value="">Alle</option>
-          </select>
+      {melding && <p style={styles.message}>{melding}</p>}
 
-          <input
-            className="admin-search"
-            placeholder="Zoek op klant-email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        {loading ? (
-          <p>Registraties laden...</p>
-        ) : (
-          <table className="admin-table">
+      {loading ? (
+        <p>⏳ Registraties worden geladen...</p>
+      ) : (
+        <div style={{ overflowX: "auto", marginTop: "1rem" }}>
+          <table style={styles.table}>
             <thead>
               <tr>
-                <th>Klant</th>
-                <th>Installateur</th>
-                <th>Product</th>
                 <th>Datum</th>
+                <th>Naam</th>
+                <th>Email</th>
+                <th>Installateur</th>
                 <th>Status</th>
-                <th>Punten</th>
                 <th>Acties</th>
               </tr>
             </thead>
-
             <tbody>
-              {filtered().map((r) => (
+              {gefilterd.map((r) => (
                 <tr key={r.id}>
                   <td>
-                    {r.customer_name}<br />
-                    <small>{r.customer_email}</small>
+                    {r.createdAt && r.createdAt.toDate
+                      ? r.createdAt.toDate().toLocaleString()
+                      : "—"}
                   </td>
-
+                  <td>{r.customerName || r.name || "—"}</td>
+                  <td>{r.customerEmail || r.email || "—"}</td>
+                  <td>{r.installer_name || r.installer_email || r.installer_uid || "—"}</td>
                   <td>
-                    {r.installer_name || "-"}<br />
-                    <small>{r.installer_email || ""}</small>
-                  </td>
-
-                  <td>{r.product_name}</td>
-
-                  <td>
-                    {r.createdAt?.toDate
-                      ? r.createdAt.toDate().toLocaleDateString()
-                      : "-"}
-                  </td>
-
-                  <td>
-                    {r.status === "pending" && <span>⏳</span>}
-                    {r.status === "approved" && <span style={{ color: "green" }}>✔</span>}
-                    {r.status === "rejected" && (
-                      <span style={{ color: "red" }}>✖</span>
-                    )}
-                  </td>
-
-                  <td>{r.points ?? 0}</td>
-
-                  <td>
-                    {r.status === "pending" && (
-                      <>
-                        <button
-                          className="admin-btn"
-                          onClick={() => approve(r)}
-                        >
-                          ✔ Goedkeuren
-                        </button>
-
-                        <button
-                          className="admin-btn"
-                          style={{ background: "#c62828" }}
-                          onClick={() => reject(r)}
-                        >
-                          ✖ Afkeuren
-                        </button>
-                      </>
-                    )}
-
-                    <button
-                      className="admin-btn"
-                      style={{ background: "#444" }}
-                      onClick={() => remove(r)}
+                    <span
+                      style={{
+                        padding: "0.2rem 0.6rem",
+                        borderRadius: 999,
+                        fontSize: 12,
+                        background:
+                          (r.status || "pending") === "approved"
+                            ? "#e5ffe7"
+                            : (r.status || "pending") === "rejected"
+                            ? "#ffe5e5"
+                            : "#fff8e1",
+                        color:
+                          (r.status || "pending") === "approved"
+                            ? "#0a7a26"
+                            : (r.status || "pending") === "rejected"
+                            ? "#a00"
+                            : "#9c6b00",
+                      }}
                     >
-                      🗑 Verwijderen
-                    </button>
+                      {r.status || "pending"}
+                    </span>
+                    {r.rejectedReason && (
+                      <div style={{ fontSize: 11, color: "#a00", marginTop: 4 }}>
+                        Reden: {r.rejectedReason}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                      {(r.status || "pending") === "pending" && (
+                        <>
+                          <button
+                            style={styles.approveBtn}
+                            onClick={() => approveRegistration(r)}
+                          >
+                            ✅ Goedkeuren
+                          </button>
+                          <button
+                            style={styles.rejectBtn}
+                            onClick={() => rejectRegistration(r)}
+                          >
+                            ❌ Afwijzen
+                          </button>
+                        </>
+                      )}
+                      {(r.status || "pending") !== "pending" && (
+                        <span style={{ fontSize: 12, color: "#555" }}>
+                          Actie voltooid
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
-
-              {filtered().length === 0 && (
+              {gefilterd.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="admin-empty">
-                    Geen registraties gevonden.
+                  <td colSpan="6" style={{ padding: "1rem", textAlign: "center" }}>
+                    Geen registraties gevonden voor deze filter.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
+
+const styles = {
+  page: {
+    fontFamily: "Inter, system-ui, sans-serif",
+    padding: "2rem",
+    background: "#f4f6fb",
+    minHeight: "100vh",
+  },
+  filterRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    marginTop: "1rem",
+  },
+  select: {
+    padding: "0.4rem 0.6rem",
+    borderRadius: 8,
+    border: "1px solid #ccc",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    background: "#fff",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+  },
+  approveBtn: {
+    background: "#0a7a26",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    padding: "0.3rem 0.6rem",
+    cursor: "pointer",
+    fontSize: 12,
+  },
+  rejectBtn: {
+    background: "#e53935",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    padding: "0.3rem 0.6rem",
+    cursor: "pointer",
+    fontSize: 12,
+  },
+  message: {
+    marginTop: "1rem",
+    textAlign: "left",
+    color: "#004aad",
+    fontWeight: "bold",
+  },
+};

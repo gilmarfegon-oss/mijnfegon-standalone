@@ -12,7 +12,7 @@ import { db } from "../firebase";
 
 export default function Shop({ user }) {
   const [products, setProducts] = useState([]);
-  const [points, setPoints] = useState(0); // points_total uit Firestore
+  const [points, setPoints] = useState(0); // points_total van de gebruiker
   const [cart, setCart] = useState({}); // { productId: quantity }
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -36,7 +36,7 @@ export default function Shop({ user }) {
 
         if (userSnap.exists()) {
           const data = userSnap.data();
-          setPoints(data.points_total || 0); // <<< HIER gebruiken we points_total
+          setPoints(data.points_total || 0);
         } else {
           setPoints(0);
         }
@@ -95,7 +95,8 @@ export default function Shop({ user }) {
         return {
           ...product,
           quantity,
-          lineTotal: product.priceDrops * quantity,
+          // prijs in drops = product.points
+          lineTotal: (product.points || 0) * quantity,
         };
       })
       .filter(Boolean);
@@ -137,7 +138,7 @@ export default function Shop({ user }) {
         }
 
         const data = userSnap.data();
-        const current = data.points_total || 0; // <<< points_total uit Firestore
+        const current = data.points_total || 0;
 
         if (current < cartTotal) {
           throw new Error(
@@ -157,10 +158,10 @@ export default function Shop({ user }) {
           items: cartItems.map((item) => ({
             productId: item.id,
             name: item.name,
-            priceDrops: item.priceDrops,
+            points: item.points || 0, // prijs per stuk in punten
             quantity: item.quantity,
           })),
-          totalDrops: cartTotal,
+          totalPoints: cartTotal,
           createdAt: serverTimestamp(),
           status: "completed",
         });
@@ -258,7 +259,7 @@ export default function Shop({ user }) {
                   </p>
                 )}
                 <p style={{ margin: 0 }}>
-                  <strong>{product.priceDrops}</strong> Fegon Drops
+                  <strong>{product.points}</strong> Fegon Drops
                 </p>
               </div>
               <button
@@ -307,7 +308,7 @@ export default function Shop({ user }) {
                   <tr key={item.id}>
                     <td style={{ padding: 8 }}>{item.name}</td>
                     <td style={{ padding: 8, textAlign: "right" }}>
-                      {item.priceDrops} Drops
+                      {item.points} Drops
                     </td>
                     <td style={{ padding: 8, textAlign: "right" }}>
                       <input

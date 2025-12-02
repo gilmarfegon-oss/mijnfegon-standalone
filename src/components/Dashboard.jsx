@@ -34,8 +34,10 @@ export default function Dashboard({ user, role }) {
           setBedrijf(data.company || "Onbekend bedrijf");
         }
       },
-      (err) => console.error("Gebruiker error:", err)
-    );
+      (error) => {
+    console.error("Dashboard user onSnapshot error:", error.code, error.message);
+  }
+);
 
     // ✅ Tellen totaal aantal registraties
     async function telRegistraties() {

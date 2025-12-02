@@ -1,13 +1,14 @@
+// src/components/ProductenBeheer.jsx
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
 import {
   collection,
-  getDocs,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
   onSnapshot,
+  serverTimestamp,
 } from "firebase/firestore";
 
 export default function ProductenBeheer() {
@@ -23,10 +24,20 @@ export default function ProductenBeheer() {
 
   // 🔹 Realtime producten ophalen
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "products"), (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setProducten(data);
-    });
+    const ref = collection(db, "products");
+
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setProducten(data);
+      },
+      (error) => {
+        console.error("ProductenBeheer onSnapshot error:", error.code, error.message);
+        setMelding("❌ Kan producten niet laden (rechten of netwerkprobleem).");
+      }
+    );
+
     return () => unsub();
   }, []);
 
@@ -42,11 +53,13 @@ export default function ProductenBeheer() {
         description: nieuwProduct.description,
         points: Number(nieuwProduct.points),
         image: nieuwProduct.image,
-        createdAt: new Date(),
+        active: true,
+        createdAt: serverTimestamp(),
       });
       setNieuwProduct({ name: "", description: "", points: "", image: "" });
       setMelding("✅ Product succesvol toegevoegd!");
     } catch (err) {
+      console.error("voegProductToe error:", err);
       setMelding("❌ Fout bij toevoegen: " + err.message);
     }
   }
@@ -65,26 +78,30 @@ export default function ProductenBeheer() {
       setBewerktProduct(null);
       setMelding("✅ Product succesvol bijgewerkt!");
     } catch (err) {
+      console.error("updateProduct error:", err);
       setMelding("❌ Fout bij bewerken: " + err.message);
     }
   }
 
   // 🔹 Product verwijderen
   async function verwijderProduct(id) {
-    if (window.confirm("Weet je zeker dat je dit product wilt verwijderen?")) {
-      try {
-        await deleteDoc(doc(db, "products", id));
-        setMelding("🗑️ Product verwijderd.");
-      } catch (err) {
-        setMelding("❌ Fout bij verwijderen: " + err.message);
-      }
+    if (!window.confirm("Weet je zeker dat je dit product wilt verwijderen?")) return;
+
+    try {
+      await deleteDoc(doc(db, "products", id));
+      setMelding("🗑️ Product verwijderd.");
+    } catch (err) {
+      console.error("verwijderProduct error:", err);
+      setMelding("❌ Fout bij verwijderen: " + err.message);
     }
   }
 
   return (
     <div style={styles.page}>
       <h1>🛠️ Productbeheer</h1>
-      <p style={{ color: "#555" }}>Beheer alle producten die zichtbaar zijn in de shop.</p>
+      <p style={{ color: "#555" }}>
+        Beheer alle producten die zichtbaar zijn in de shop.
+      </p>
 
       {/* ✅ Toevoegen */}
       <div style={styles.addBox}>
@@ -93,26 +110,34 @@ export default function ProductenBeheer() {
           style={styles.input}
           placeholder="Naam van het product"
           value={nieuwProduct.name}
-          onChange={(e) => setNieuwProduct({ ...nieuwProduct, name: e.target.value })}
+          onChange={(e) =>
+            setNieuwProduct({ ...nieuwProduct, name: e.target.value })
+          }
         />
         <textarea
           style={styles.textarea}
           placeholder="Beschrijving"
           value={nieuwProduct.description}
-          onChange={(e) => setNieuwProduct({ ...nieuwProduct, description: e.target.value })}
+          onChange={(e) =>
+            setNieuwProduct({ ...nieuwProduct, description: e.target.value })
+          }
         />
         <input
           style={styles.input}
-          placeholder="Aantal punten"
+          placeholder="Aantal punten (Fegon Drops)"
           type="number"
           value={nieuwProduct.points}
-          onChange={(e) => setNieuwProduct({ ...nieuwProduct, points: e.target.value })}
+          onChange={(e) =>
+            setNieuwProduct({ ...nieuwProduct, points: e.target.value })
+          }
         />
         <input
           style={styles.input}
           placeholder="Afbeelding URL (optioneel)"
           value={nieuwProduct.image}
-          onChange={(e) => setNieuwProduct({ ...nieuwProduct, image: e.target.value })}
+          onChange={(e) =>
+            setNieuwProduct({ ...nieuwProduct, image: e.target.value })
+          }
         />
         <button onClick={voegProductToe} style={styles.saveBtn}>
           ➕ Toevoegen
@@ -139,7 +164,16 @@ export default function ProductenBeheer() {
               <td>{p.points}</td>
               <td>
                 {p.image ? (
-                  <img src={p.image} alt={p.name} style={{ width: 50, height: 50, objectFit: "cover", borderRadius: 6 }} />
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    style={{
+                      width: 50,
+                      height: 50,
+                      objectFit: "cover",
+                      borderRadius: 6,
+                    }}
+                  />
                 ) : (
                   "—"
                 )}
@@ -178,7 +212,10 @@ export default function ProductenBeheer() {
             style={styles.textarea}
             value={bewerktProduct.description}
             onChange={(e) =>
-              setBewerktProduct({ ...bewerktProduct, description: e.target.value })
+              setBewerktProduct({
+                ...bewerktProduct,
+                description: e.target.value,
+              })
             }
           />
           <input
@@ -186,7 +223,10 @@ export default function ProductenBeheer() {
             type="number"
             value={bewerktProduct.points}
             onChange={(e) =>
-              setBewerktProduct({ ...bewerktProduct, points: e.target.value })
+              setBewerktProduct({
+                ...bewerktProduct,
+                points: e.target.value,
+              })
             }
           />
           <input
