@@ -19,6 +19,13 @@ export default function Shop({ user }) {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  // ✅ Helper: veilige prijs in punten
+  const getProductPrice = (product) => {
+    const raw = product?.points ?? product?.priceDrops ?? 0;
+    const num = Number(raw);
+    return Number.isFinite(num) && num >= 0 ? num : 0;
+  };
+
   // -------------------------
   // Data ophalen (user + producten)
   // -------------------------
@@ -36,7 +43,9 @@ export default function Shop({ user }) {
 
         if (userSnap.exists()) {
           const data = userSnap.data();
-          setPoints(data.points_total || 0);
+          const raw = data.points_total ?? 0;
+          const num = Number(raw);
+          setPoints(Number.isFinite(num) ? num : 0);
         } else {
           setPoints(0);
         }
@@ -47,7 +56,7 @@ export default function Shop({ user }) {
 
         const list = productsSnap.docs
           .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((p) => p.active !== false); // alleen actieve producten
+          .filter((p) => p.active !== false);
 
         setProducts(list);
       } catch (err) {
@@ -92,25 +101,32 @@ export default function Shop({ user }) {
       .map(([id, quantity]) => {
         const product = products.find((p) => p.id === id);
         if (!product) return null;
+
+        const price = getProductPrice(product);
+        const lineTotal = price * quantity;
+
         return {
           ...product,
           quantity,
-          // prijs in drops = product.points
-          lineTotal: (product.points || 0) * quantity,
+          price,
+          lineTotal,
         };
       })
-      .filter(Boolean);
+      .filter((item) => item !== null);
   }, [cart, products]);
 
-  const cartTotal = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.lineTotal, 0),
-    [cartItems]
-  );
+  const cartTotal = useMemo(() => {
+    const sum = cartItems.reduce((acc, item) => {
+      const lt = Number(item.lineTotal);
+      return acc + (Number.isFinite(lt) ? lt : 0);
+    }, 0);
+    return sum;
+  }, [cartItems]);
 
   const enoughPoints = points >= cartTotal;
 
   // -------------------------
-  // Checkout (points_total aanpassen + order opslaan)
+  // Checkout
   // -------------------------
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
@@ -138,9 +154,10 @@ export default function Shop({ user }) {
         }
 
         const data = userSnap.data();
-        const current = data.points_total || 0;
+        const rawCurrent = data.points_total ?? 0;
+        const current = Number(rawCurrent);
 
-        if (current < cartTotal) {
+        if (!Number.isFinite(current) || current < cartTotal) {
           throw new Error(
             "Onvoldoende Fegon Drops. Je saldo is tussentijds gewijzigd."
           );
@@ -148,17 +165,15 @@ export default function Shop({ user }) {
 
         const newBalance = current - cartTotal;
 
-        // saldo updaten in Firestore
         transaction.update(userRef, { points_total: newBalance });
 
-        // order opslaan
         const orderRef = doc(ordersRef);
         transaction.set(orderRef, {
           userId: user.uid,
           items: cartItems.map((item) => ({
             productId: item.id,
             name: item.name,
-            points: item.points || 0, // prijs per stuk in punten
+            points: item.price,
             quantity: item.quantity,
           })),
           totalPoints: cartTotal,
@@ -166,7 +181,6 @@ export default function Shop({ user }) {
           status: "completed",
         });
 
-        // UI-saldo bijwerken
         setPoints(newBalance);
       });
 
@@ -188,198 +202,349 @@ export default function Shop({ user }) {
   }
 
   return (
-    <div style={{ padding: "20px", maxWidth: 900, margin: "0 auto" }}>
-      <header style={{ marginBottom: 20 }}>
-        <h1>Fegon Shop</h1>
-        <p>
-          Saldo:{" "}
-          <strong>{points.toLocaleString()} Fegon Drops</strong>
-        </p>
-      </header>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <header style={styles.header}>
+          <div>
+            <h1 style={styles.title}>Fegon Shop</h1>
+            <p style={styles.subtitle}>
+              Wissel je Fegon Drops in voor producten en beloningen.
+            </p>
+          </div>
+          <div style={styles.balanceCard}>
+            <span style={styles.balanceLabel}>Saldo</span>
+            <span style={styles.balanceValue}>
+              {points.toLocaleString()} Drops
+            </span>
+          </div>
+        </header>
 
-      {error && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 10,
-            borderRadius: 4,
-            backgroundColor: "#ffe5e5",
-            color: "#a00",
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {successMessage && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 10,
-            borderRadius: 4,
-            backgroundColor: "#e5ffe8",
-            color: "#0a7a26",
-          }}
-        >
-          {successMessage}
-        </div>
-      )}
-
-      {/* Producten */}
-      <section style={{ marginBottom: 40 }}>
-        <h2>Producten</h2>
-        {products.length === 0 && <p>Er zijn nog geen producten beschikbaar.</p>}
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
-            marginTop: 16,
-          }}
-        >
-          {products.map((product) => (
-            <div
-              key={product.id}
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: 8,
-                padding: 12,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: 180,
-              }}
-            >
-              <div>
-                <h3 style={{ margin: "0 0 8px" }}>{product.name}</h3>
-                {product.description && (
-                  <p style={{ margin: "0 0 8px", fontSize: 14 }}>
-                    {product.description}
-                  </p>
-                )}
-                <p style={{ margin: 0 }}>
-                  <strong>{product.points}</strong> Fegon Drops
-                </p>
-              </div>
-              <button
-                onClick={() => addToCart(product.id)}
-                style={{
-                  marginTop: 10,
-                  padding: "6px 10px",
-                  borderRadius: 4,
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                }}
-              >
-                In winkelwagen
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Winkelwagen */}
-      <section>
-        <h2>Winkelwagen</h2>
-        {cartItems.length === 0 ? (
-          <p>Je winkelwagen is leeg.</p>
-        ) : (
-          <>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                marginBottom: 16,
-              }}
-            >
-              <thead>
-                <tr>
-                  <th style={{ textAlign: "left", padding: 8 }}>Product</th>
-                  <th style={{ textAlign: "right", padding: 8 }}>Prijs</th>
-                  <th style={{ textAlign: "right", padding: 8 }}>Aantal</th>
-                  <th style={{ textAlign: "right", padding: 8 }}>Totaal</th>
-                  <th style={{ padding: 8 }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {cartItems.map((item) => (
-                  <tr key={item.id}>
-                    <td style={{ padding: 8 }}>{item.name}</td>
-                    <td style={{ padding: 8, textAlign: "right" }}>
-                      {item.points} Drops
-                    </td>
-                    <td style={{ padding: 8, textAlign: "right" }}>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          updateQuantity(item.id, e.target.value)
-                        }
-                        style={{ width: 60, textAlign: "right" }}
-                      />
-                    </td>
-                    <td style={{ padding: 8, textAlign: "right" }}>
-                      {item.lineTotal} Drops
-                    </td>
-                    <td style={{ padding: 8, textAlign: "center" }}>
-                      <button
-                        onClick={() => removeFromCart(item.id)}
-                        style={{
-                          border: "none",
-                          background: "transparent",
-                          cursor: "pointer",
-                          color: "#a00",
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 16,
-                flexWrap: "wrap",
-              }}
-            >
-              <p style={{ margin: 0 }}>
-                Totaal:{" "}
-                <strong>{cartTotal.toLocaleString()} Fegon Drops</strong>
-                {!enoughPoints && (
-                  <span style={{ color: "#a00", marginLeft: 8 }}>
-                    (Onvoldoende saldo)
-                  </span>
-                )}
-              </p>
-
-              <button
-                onClick={handleCheckout}
-                disabled={!enoughPoints || checkoutLoading}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: 4,
-                  border: "none",
-                  fontWeight: "bold",
-                  cursor:
-                    enoughPoints && !checkoutLoading ? "pointer" : "not-allowed",
-                  opacity: enoughPoints && !checkoutLoading ? 1 : 0.6,
-                }}
-              >
-                {checkoutLoading ? "Bezig met afrekenen..." : "Afrekenen"}
-              </button>
-            </div>
-          </>
+        {error && (
+          <div style={{ ...styles.alert, ...styles.alertError }}>{error}</div>
         )}
-      </section>
+
+        {successMessage && (
+          <div style={{ ...styles.alert, ...styles.alertSuccess }}>
+            {successMessage}
+          </div>
+        )}
+
+        <div style={styles.grid}>
+          {/* Producten */}
+          <section style={styles.leftCol}>
+            <h2 style={styles.sectionTitle}>Producten</h2>
+            {products.length === 0 ? (
+              <p>Er zijn nog geen producten beschikbaar.</p>
+            ) : (
+              <div style={styles.productsGrid}>
+                {products.map((product) => {
+                  const price = getProductPrice(product);
+                  return (
+                    <div key={product.id} style={styles.productCard}>
+                      <div>
+                        <h3 style={styles.productTitle}>{product.name}</h3>
+                        {product.description && (
+                          <p style={styles.productDescription}>
+                            {product.description}
+                          </p>
+                        )}
+                      </div>
+                      <div style={styles.productFooter}>
+                        <div>
+                          <span style={styles.priceValue}>{price}</span>
+                          <span style={styles.priceLabel}>Drops</span>
+                        </div>
+                        <button
+                          onClick={() => addToCart(product.id)}
+                          style={styles.primaryButton}
+                        >
+                          In winkelwagen
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* Winkelwagen */}
+          <section style={styles.rightCol}>
+            <h2 style={styles.sectionTitle}>Winkelwagen</h2>
+            {cartItems.length === 0 ? (
+              <p>Je winkelwagen is leeg.</p>
+            ) : (
+              <>
+                <div style={styles.cartList}>
+                  {cartItems.map((item) => (
+                    <div key={item.id} style={styles.cartItem}>
+                      <div>
+                        <div style={styles.cartItemTitle}>{item.name}</div>
+                        <div style={styles.cartItemMeta}>
+                          {item.price} Drops per stuk
+                        </div>
+                      </div>
+                      <div style={styles.cartItemControls}>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            updateQuantity(item.id, e.target.value)
+                          }
+                          style={styles.qtyInput}
+                        />
+                        <div style={styles.cartItemTotal}>
+                          {item.lineTotal} Drops
+                        </div>
+                        <button
+                          onClick={() => removeFromCart(item.id)}
+                          style={styles.removeButton}
+                          title="Verwijderen"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={styles.cartSummary}>
+                  <div>
+                    <div style={styles.summaryLabel}>Totaal</div>
+                    <div style={styles.summaryValue}>
+                      {cartTotal.toLocaleString()} Drops
+                    </div>
+                    {!enoughPoints && (
+                      <div style={styles.summaryWarning}>
+                        Onvoldoende saldo voor deze bestelling.
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleCheckout}
+                    disabled={!enoughPoints || checkoutLoading}
+                    style={{
+                      ...styles.primaryButton,
+                      ...( !enoughPoints || checkoutLoading
+                        ? styles.primaryButtonDisabled
+                        : {} ),
+                    }}
+                  >
+                    {checkoutLoading ? "Bezig met afrekenen..." : "Afrekenen"}
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
+
+const styles = {
+  page: {
+    fontFamily: "Inter, system-ui, sans-serif",
+    background: "#f4f6fb",
+    minHeight: "100vh",
+    padding: "2rem 1rem",
+  },
+  container: {
+    maxWidth: 1100,
+    margin: "0 auto",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "1.5rem",
+    alignItems: "center",
+    marginBottom: "1.5rem",
+  },
+  title: {
+    margin: 0,
+    fontSize: "1.8rem",
+  },
+  subtitle: {
+    margin: "0.4rem 0 0",
+    color: "#555",
+    fontSize: "0.95rem",
+  },
+  balanceCard: {
+    background: "#fff",
+    padding: "0.9rem 1.2rem",
+    borderRadius: 12,
+    boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
+    minWidth: 180,
+    textAlign: "right",
+  },
+  balanceLabel: {
+    display: "block",
+    fontSize: 12,
+    color: "#777",
+  },
+  balanceValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#004aad",
+  },
+  alert: {
+    padding: "0.6rem 0.8rem",
+    borderRadius: 8,
+    marginBottom: "1rem",
+    fontSize: 14,
+  },
+  alertError: {
+    background: "#ffe5e5",
+    color: "#a00",
+  },
+  alertSuccess: {
+    background: "#e5ffe8",
+    color: "#0a7a26",
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "2fr 1.3fr",
+    gap: "1.5rem",
+  },
+  leftCol: {
+    minWidth: 0,
+  },
+  rightCol: {
+    minWidth: 0,
+  },
+  sectionTitle: {
+    margin: "0 0 0.8rem",
+    fontSize: "1.1rem",
+  },
+  productsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 16,
+  },
+  productCard: {
+    background: "#fff",
+    borderRadius: 12,
+    padding: "1rem",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    minHeight: 150,
+  },
+  productTitle: {
+    margin: "0 0 0.4rem",
+    fontSize: "1rem",
+  },
+  productDescription: {
+    margin: 0,
+    color: "#666",
+    fontSize: 13,
+  },
+  productFooter: {
+    marginTop: "0.8rem",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "0.8rem",
+  },
+  priceValue: {
+    display: "block",
+    fontWeight: "bold",
+    fontSize: 18,
+  },
+  priceLabel: {
+    display: "block",
+    fontSize: 11,
+    color: "#777",
+  },
+  primaryButton: {
+    background: "#004aad",
+    color: "#fff",
+    border: "none",
+    borderRadius: 999,
+    padding: "0.5rem 1rem",
+    cursor: "pointer",
+    fontWeight: "bold",
+    fontSize: 14,
+    whiteSpace: "nowrap",
+  },
+  primaryButtonDisabled: {
+    opacity: 0.6,
+    cursor: "not-allowed",
+  },
+  cartList: {
+    background: "#fff",
+    borderRadius: 12,
+    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+    padding: "0.8rem",
+    maxHeight: 340,
+    overflowY: "auto",
+  },
+  cartItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "0.8rem",
+    padding: "0.5rem 0.3rem",
+    borderBottom: "1px solid #eee",
+    alignItems: "center",
+  },
+  cartItemTitle: {
+    fontSize: 14,
+    fontWeight: 500,
+  },
+  cartItemMeta: {
+    fontSize: 12,
+    color: "#777",
+  },
+  cartItemControls: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.4rem",
+  },
+  qtyInput: {
+    width: 55,
+    padding: "0.2rem 0.3rem",
+    textAlign: "right",
+    borderRadius: 6,
+    border: "1px solid #ccc",
+    fontSize: 13,
+  },
+  cartItemTotal: {
+    fontSize: 13,
+    minWidth: 80,
+    textAlign: "right",
+  },
+  removeButton: {
+    border: "none",
+    background: "transparent",
+    color: "#a00",
+    cursor: "pointer",
+    fontSize: 16,
+    lineHeight: 1,
+  },
+  cartSummary: {
+    marginTop: "1rem",
+    background: "#fff",
+    borderRadius: 12,
+    padding: "0.9rem 1rem",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "1rem",
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: "#777",
+  },
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  summaryWarning: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#a00",
+  },
+};
