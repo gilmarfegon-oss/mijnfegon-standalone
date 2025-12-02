@@ -10,9 +10,10 @@ import "./firebase";
 // 📄 Basisstijl (optioneel)
 import "./index.css";
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-    <HashRouter>
-        <App />
-    </HashRouter>
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
 );
