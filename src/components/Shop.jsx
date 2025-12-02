@@ -1,208 +1,384 @@
-import React, { useEffect, useState } from "react";
-import { db, auth } from "../firebase";
+// src/components/Shop.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import {
   collection,
-  onSnapshot,
   doc,
   getDoc,
-  updateDoc,
+  getDocs,
+  runTransaction,
+  serverTimestamp,
 } from "firebase/firestore";
-import { signOut } from "firebase/auth";
-import { Link } from "react-router-dom";
+import { db } from "../firebase";
 
 export default function Shop({ user }) {
   const [products, setProducts] = useState([]);
-  const [userPoints, setUserPoints] = useState(0);
+  const [points, setPoints] = useState(0); // points_total uit Firestore
+  const [cart, setCart] = useState({}); // { productId: quantity }
   const [loading, setLoading] = useState(true);
-  const [melding, setMelding] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
-  // 🔹 Haal producten op uit Firestore
+  // -------------------------
+  // Data ophalen (user + producten)
+  // -------------------------
   useEffect(() => {
-    const unsubProducts = onSnapshot(collection(db, "shop"), (snap) => {
-      setProducts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    });
+    if (!user) return;
 
-    // 🔹 Haal gebruikerspunten op
-    const unsubUser = onSnapshot(doc(db, "users", user.uid), (snap) => {
-      if (snap.exists()) setUserPoints(snap.data().points_total || 0);
-    });
+    async function loadData() {
+      try {
+        setLoading(true);
+        setError("");
 
-    return () => {
-      unsubProducts();
-      unsubUser();
-    };
+        // 1. punten van user ophalen (points_total)
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          setPoints(data.points_total || 0); // <<< HIER gebruiken we points_total
+        } else {
+          setPoints(0);
+        }
+
+        // 2. producten ophalen
+        const productsRef = collection(db, "products");
+        const productsSnap = await getDocs(productsRef);
+
+        const list = productsSnap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((p) => p.active !== false); // alleen actieve producten
+
+        setProducts(list);
+      } catch (err) {
+        console.error("Fout bij laden shop:", err);
+        setError("Er ging iets mis bij het laden van de shop.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
   }, [user]);
 
-  // 🛒 Product kopen
-  async function handlePurchase(product) {
-    if (userPoints < product.points) {
-      setMelding("❌ Je hebt niet genoeg punten voor dit product.");
+  // -------------------------
+  // Winkelwagen functies
+  // -------------------------
+  const addToCart = (productId) => {
+    setCart((prev) => ({
+      ...prev,
+      [productId]: (prev[productId] || 0) + 1,
+    }));
+  };
+
+  const removeFromCart = (productId) => {
+    setCart((prev) => {
+      const copy = { ...prev };
+      delete copy[productId];
+      return copy;
+    });
+  };
+
+  const updateQuantity = (productId, value) => {
+    const qty = Number(value);
+    if (isNaN(qty) || qty <= 0) {
+      return removeFromCart(productId);
+    }
+    setCart((prev) => ({ ...prev, [productId]: qty }));
+  };
+
+  const cartItems = useMemo(() => {
+    return Object.entries(cart)
+      .map(([id, quantity]) => {
+        const product = products.find((p) => p.id === id);
+        if (!product) return null;
+        return {
+          ...product,
+          quantity,
+          lineTotal: product.priceDrops * quantity,
+        };
+      })
+      .filter(Boolean);
+  }, [cart, products]);
+
+  const cartTotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.lineTotal, 0),
+    [cartItems]
+  );
+
+  const enoughPoints = points >= cartTotal;
+
+  // -------------------------
+  // Checkout (points_total aanpassen + order opslaan)
+  // -------------------------
+  const handleCheckout = async () => {
+    if (cartItems.length === 0) {
+      setError("Je winkelwagen is leeg.");
       return;
     }
 
+    if (!enoughPoints) {
+      setError("Onvoldoende Fegon Drops.");
+      return;
+    }
+
+    setError("");
+    setSuccessMessage("");
+    setCheckoutLoading(true);
+
     try {
       const userRef = doc(db, "users", user.uid);
-      const newPoints = userPoints - product.points;
+      const ordersRef = collection(db, "orders");
 
-      await updateDoc(userRef, { points_total: newPoints });
+      await runTransaction(db, async (transaction) => {
+        const userSnap = await transaction.get(userRef);
+        if (!userSnap.exists()) {
+          throw new Error("Gebruiker niet gevonden.");
+        }
 
-      setMelding(`✅ Je hebt "${product.name}" gekocht voor ${product.points} punten!`);
-      setTimeout(() => setMelding(""), 4000);
+        const data = userSnap.data();
+        const current = data.points_total || 0; // <<< points_total uit Firestore
+
+        if (current < cartTotal) {
+          throw new Error(
+            "Onvoldoende Fegon Drops. Je saldo is tussentijds gewijzigd."
+          );
+        }
+
+        const newBalance = current - cartTotal;
+
+        // saldo updaten in Firestore
+        transaction.update(userRef, { points_total: newBalance });
+
+        // order opslaan
+        const orderRef = doc(ordersRef);
+        transaction.set(orderRef, {
+          userId: user.uid,
+          items: cartItems.map((item) => ({
+            productId: item.id,
+            name: item.name,
+            priceDrops: item.priceDrops,
+            quantity: item.quantity,
+          })),
+          totalDrops: cartTotal,
+          createdAt: serverTimestamp(),
+          status: "completed",
+        });
+
+        // UI-saldo bijwerken
+        setPoints(newBalance);
+      });
+
+      setCart({});
+      setSuccessMessage("Bestelling succesvol geplaatst! 🎉");
     } catch (err) {
-      console.error(err);
-      setMelding("❌ Er is een fout opgetreden bij het voltooien van de aankoop.");
+      console.error("Checkout fout:", err);
+      setError(err.message || "Er ging iets mis bij het afrekenen.");
+    } finally {
+      setCheckoutLoading(false);
     }
+  };
+
+  // -------------------------
+  // UI
+  // -------------------------
+  if (loading) {
+    return <p style={{ padding: 20 }}>🛒 Shop wordt geladen...</p>;
   }
 
-  if (loading) return <div style={styles.loading}>⏳ Laden...</div>;
-
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <h1>🛍️ Shop</h1>
-        <div style={styles.pointsBox}>
-          <strong>💰 Mijn punten:</strong> {userPoints}
-        </div>
-        <div style={{ display: "flex", gap: "0.8rem" }}>
-          <Link to="/dashboard" style={styles.backBtn}>← Terug</Link>
-          <button onClick={() => signOut(auth)} style={styles.logoutBtn}>Uitloggen</button>
-        </div>
+    <div style={{ padding: "20px", maxWidth: 900, margin: "0 auto" }}>
+      <header style={{ marginBottom: 20 }}>
+        <h1>Fegon Shop</h1>
+        <p>
+          Saldo:{" "}
+          <strong>{points.toLocaleString()} Fegon Drops</strong>
+        </p>
       </header>
 
-      {melding && <p style={styles.melding}>{melding}</p>}
+      {error && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 10,
+            borderRadius: 4,
+            backgroundColor: "#ffe5e5",
+            color: "#a00",
+          }}
+        >
+          {error}
+        </div>
+      )}
 
-      <div style={styles.grid}>
-        {products.length === 0 ? (
-          <p style={{ textAlign: "center", color: "#888", width: "100%" }}>
-            Er zijn momenteel geen producten beschikbaar.
-          </p>
-        ) : (
-          products.map((p) => (
-            <div key={p.id} style={styles.card}>
-              {p.image && (
-                <img
-                  src={p.image}
-                  alt={p.name}
-                  style={styles.image}
-                />
-              )}
-              <h3 style={styles.name}>{p.name}</h3>
-              <p style={styles.description}>{p.description || "Geen beschrijving beschikbaar."}</p>
-              <p style={styles.points}>💸 {p.points} punten</p>
+      {successMessage && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 10,
+            borderRadius: 4,
+            backgroundColor: "#e5ffe8",
+            color: "#0a7a26",
+          }}
+        >
+          {successMessage}
+        </div>
+      )}
+
+      {/* Producten */}
+      <section style={{ marginBottom: 40 }}>
+        <h2>Producten</h2>
+        {products.length === 0 && <p>Er zijn nog geen producten beschikbaar.</p>}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 16,
+            marginTop: 16,
+          }}
+        >
+          {products.map((product) => (
+            <div
+              key={product.id}
+              style={{
+                border: "1px solid #ddd",
+                borderRadius: 8,
+                padding: 12,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                minHeight: 180,
+              }}
+            >
+              <div>
+                <h3 style={{ margin: "0 0 8px" }}>{product.name}</h3>
+                {product.description && (
+                  <p style={{ margin: "0 0 8px", fontSize: 14 }}>
+                    {product.description}
+                  </p>
+                )}
+                <p style={{ margin: 0 }}>
+                  <strong>{product.priceDrops}</strong> Fegon Drops
+                </p>
+              </div>
               <button
-                onClick={() => handlePurchase(p)}
+                onClick={() => addToCart(product.id)}
                 style={{
-                  ...styles.buyBtn,
-                  background: userPoints >= p.points ? "#004aad" : "#ccc",
-                  cursor: userPoints >= p.points ? "pointer" : "not-allowed",
+                  marginTop: 10,
+                  padding: "6px 10px",
+                  borderRadius: 4,
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: "bold",
                 }}
-                disabled={userPoints < p.points}
               >
-                {userPoints >= p.points ? "Kopen" : "Niet genoeg punten"}
+                In winkelwagen
               </button>
             </div>
-          ))
+          ))}
+        </div>
+      </section>
+
+      {/* Winkelwagen */}
+      <section>
+        <h2>Winkelwagen</h2>
+        {cartItems.length === 0 ? (
+          <p>Je winkelwagen is leeg.</p>
+        ) : (
+          <>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                marginBottom: 16,
+              }}
+            >
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", padding: 8 }}>Product</th>
+                  <th style={{ textAlign: "right", padding: 8 }}>Prijs</th>
+                  <th style={{ textAlign: "right", padding: 8 }}>Aantal</th>
+                  <th style={{ textAlign: "right", padding: 8 }}>Totaal</th>
+                  <th style={{ padding: 8 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {cartItems.map((item) => (
+                  <tr key={item.id}>
+                    <td style={{ padding: 8 }}>{item.name}</td>
+                    <td style={{ padding: 8, textAlign: "right" }}>
+                      {item.priceDrops} Drops
+                    </td>
+                    <td style={{ padding: 8, textAlign: "right" }}>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          updateQuantity(item.id, e.target.value)
+                        }
+                        style={{ width: 60, textAlign: "right" }}
+                      />
+                    </td>
+                    <td style={{ padding: 8, textAlign: "right" }}>
+                      {item.lineTotal} Drops
+                    </td>
+                    <td style={{ padding: 8, textAlign: "center" }}>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        style={{
+                          border: "none",
+                          background: "transparent",
+                          cursor: "pointer",
+                          color: "#a00",
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 16,
+                flexWrap: "wrap",
+              }}
+            >
+              <p style={{ margin: 0 }}>
+                Totaal:{" "}
+                <strong>{cartTotal.toLocaleString()} Fegon Drops</strong>
+                {!enoughPoints && (
+                  <span style={{ color: "#a00", marginLeft: 8 }}>
+                    (Onvoldoende saldo)
+                  </span>
+                )}
+              </p>
+
+              <button
+                onClick={handleCheckout}
+                disabled={!enoughPoints || checkoutLoading}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 4,
+                  border: "none",
+                  fontWeight: "bold",
+                  cursor:
+                    enoughPoints && !checkoutLoading ? "pointer" : "not-allowed",
+                  opacity: enoughPoints && !checkoutLoading ? 1 : 0.6,
+                }}
+              >
+                {checkoutLoading ? "Bezig met afrekenen..." : "Afrekenen"}
+              </button>
+            </div>
+          </>
         )}
-      </div>
+      </section>
     </div>
   );
 }
-
-// 🎨 Fegon UI stijl
-const styles = {
-  page: {
-    fontFamily: "Inter, system-ui, sans-serif",
-    background: "#f4f6fb",
-    minHeight: "100vh",
-    padding: "2rem",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: "2rem",
-    background: "#fff",
-    padding: "1rem 1.5rem",
-    borderRadius: 12,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-  },
-  backBtn: {
-    background: "transparent",
-    color: "#004aad",
-    border: "2px solid #004aad",
-    borderRadius: 8,
-    padding: "0.5rem 1rem",
-    textDecoration: "none",
-    fontWeight: "bold",
-  },
-  logoutBtn: {
-    background: "#ff4d4f",
-    color: "#fff",
-    border: "none",
-    borderRadius: 8,
-    padding: "0.5rem 1rem",
-    cursor: "pointer",
-  },
-  pointsBox: {
-    fontSize: "1.1rem",
-    color: "#002f6c",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-    gap: "1.5rem",
-  },
-  card: {
-    background: "#fff",
-    borderRadius: 12,
-    padding: "1.5rem",
-    textAlign: "center",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-  },
-  image: {
-    width: "100%",
-    height: 160,
-    objectFit: "cover",
-    borderRadius: 8,
-    marginBottom: "1rem",
-  },
-  name: {
-    fontSize: "1.2rem",
-    fontWeight: "bold",
-    color: "#002f6c",
-  },
-  description: {
-    color: "#555",
-    fontSize: "0.9rem",
-    margin: "0.5rem 0 1rem",
-  },
-  points: {
-    fontWeight: "bold",
-    color: "#004aad",
-    marginBottom: "1rem",
-  },
-  buyBtn: {
-    color: "#fff",
-    border: "none",
-    borderRadius: 8,
-    padding: "0.8rem",
-    fontWeight: "bold",
-    transition: "all 0.2s ease",
-  },
-  melding: {
-    textAlign: "center",
-    color: "#004aad",
-    marginBottom: "1.5rem",
-    fontWeight: "600",
-  },
-  loading: {
-    textAlign: "center",
-    marginTop: "4rem",
-    color: "#004aad",
-    fontSize: "1.2rem",
-  },
-};
