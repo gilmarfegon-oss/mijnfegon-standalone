@@ -1,12 +1,24 @@
-import React, { useState } from "react";
-import { auth, db } from "../firebase";
+// src/components/Login.jsx
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { auth, db, functions } from "../firebase";
 import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithEmailAndPassword,
-  sendPasswordResetEmail,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+  increment,
+} from "firebase/firestore";
+
+// Zorg dat layout.css geladen wordt
+import '../styles/layout.css'; 
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -14,214 +26,162 @@ export default function Login() {
   const [melding, setMelding] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const navigate = useNavigate();
   const provider = new GoogleAuthProvider();
 
+  // --- LOGICA ---
+
   async function upsertUserDoc(user) {
-    const ref = doc(db, "users", user.uid);
-    const snap = await getDoc(ref);
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
 
     if (snap.exists()) {
-      await setDoc(
-        ref,
-        {
-          uid: user.uid,
-          email: user.email,
-          name: user.displayName || snap.data().name || "",
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+      await updateDoc(userRef, { last_login: serverTimestamp() });
     } else {
-      await setDoc(ref, {
+      await setDoc(userRef, {
         uid: user.uid,
         email: user.email,
-        name: user.displayName || "",
+        installer_full_name: user.displayName || "",
         role: "user",
-        company: "",
+        createdAt: serverTimestamp(),
+        last_login: serverTimestamp(),
         points_total: 0,
         points_pending: 0,
+        company: "",
         profile_completed: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       });
     }
+
+    const statsRef = doc(db, "stats", "dashboard");
+    await setDoc(statsRef, { total_logins: increment(1) }, { merge: true });
   }
 
-  async function handleGoogle() {
-    setLoading(true);
-    setMelding("");
-
+  async function handleGoogleLogin() {
     try {
-      const res = await signInWithPopup(auth, provider);
-      await upsertUserDoc(res.user);
-    } catch (e) {
-      console.error(e);
-      setMelding("❌ " + e.message);
+      setLoading(true);
+      const result = await signInWithPopup(auth, provider);
+      await upsertUserDoc(result.user);
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      setMelding("Inloggen met Google mislukt.");
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleEmailLogin() {
+  async function handleEmailLogin(e) {
+    e.preventDefault();
     setLoading(true);
     setMelding("");
-
     try {
-      const res = await signInWithEmailAndPassword(auth, email, pw);
-      await upsertUserDoc(res.user);
-    } catch (e) {
-      let msg = "❌ Inloggen mislukt.";
-
-      if (e.code === "auth/user-not-found") msg = "❌ Geen gebruiker gevonden.";
-      if (e.code === "auth/wrong-password") msg = "❌ Incorrect wachtwoord.";
-      if (e.code === "auth/invalid-email") msg = "❌ Ongeldig e-mailadres.";
-
-      setMelding(msg);
+      const result = await signInWithEmailAndPassword(auth, email, pw);
+      await upsertUserDoc(result.user);
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      setMelding("E-mail of wachtwoord onjuist.");
     } finally {
       setLoading(false);
     }
   }
 
-  async function handlePasswordReset() {
+  // ✅ VERBETERDE WACHTWOORD RESET FUNCTIE
+  async function handleForgotPw() {
     if (!email) {
-      setMelding("❌ Vul eerst je e-mail in.");
+      setMelding("Vul eerst je e-mailadres in het veld in.");
       return;
     }
 
+    setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
-      setMelding("📨 Reset e-mail verzonden!");
-    } catch (e) {
-      setMelding("❌ " + e.message);
+      await httpsCallable(functions, "sendPasswordResetLink")({ email });
+      setMelding("✅ Instructies verzonden! Check ook je spam-folder.");
+    } catch (err) {
+      console.error("Wachtwoord reset fout:", err);
+      setMelding("Kon reset-mail niet versturen. Probeer het later opnieuw.");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div style={styles.wrapper}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Inloggen</h1>
+    <div className="page-wrapper">
+      
+      {/* Header met logo's */}
+      <nav className="nav-header">
+        <div className="logo-group">
+          <img src="/logo-fegon.png" alt="Fegon" className="logo-img" />
+          <span className="logo-divider">|</span>
+          <img src="/logo-mijnfegon.png" alt="MijnFegon" className="logo-img" />
+        </div>
+      </nav>
 
-        {melding && <div style={styles.alert}>{melding}</div>}
+      {/* Container met achtergrondafbeelding */}
+      <div className="login-content">
+        
+        {/* Witte Login Kaart */}
+        <div className="card-login">
+          <h2 style={{ textAlign: "center", marginBottom: "1.5rem", color: "#333" }}>Welkom bij MijnFegon</h2>
 
-        <input
-          style={styles.input}
-          placeholder="E-mail"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+          {melding && (
+            <div className={`alert ${melding.includes("✅") ? "alert--success" : "alert--error"}`} 
+                 style={{ 
+                   background: melding.includes("✅") ? "#dcfce7" : "#fee2e2",
+                   color: melding.includes("✅") ? "#166534" : "#991b1b",
+                   padding: "10px",
+                   borderRadius: "8px",
+                   marginBottom: "1rem",
+                   fontSize: "0.9rem"
+                 }}>
+              {melding}
+            </div>
+          )}
 
-        <input
-          style={styles.input}
-          placeholder="Wachtwoord"
-          type="password"
-          value={pw}
-          onChange={(e) => setPw(e.target.value)}
-        />
+          <button onClick={handleGoogleLogin} className="btn-google" disabled={loading}>
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style={{width: 18, height: 18}}/>
+            Inloggen met Google
+          </button>
 
-        <button
-          style={styles.btnPrimary}
-          onClick={handleEmailLogin}
-          disabled={loading}
-        >
-          {loading ? "Bezig..." : "Inloggen"}
-        </button>
+          <div className="login-separator">— of —</div>
 
-        <button
-          style={styles.btnLink}
-          onClick={handlePasswordReset}
-        >
-          Wachtwoord vergeten?
-        </button>
+          <form onSubmit={handleEmailLogin} className="form">
+            <input
+              className="input"
+              placeholder="E-mailadres"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              className="input"
+              placeholder="Wachtwoord"
+              type="password"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              required
+            />
 
-        <hr style={styles.hr} />
+            <button className="btn btn--primary" style={{ width: "100%", marginTop: '10px' }} disabled={loading}>
+              {loading ? "Laden..." : "Inloggen"}
+            </button>
+          </form>
 
-        <button
-          style={styles.btnGoogle}
-          onClick={handleGoogle}
-          disabled={loading}
-        >
-          🔐 Log in met Google
-        </button>
+          <p style={{ marginTop: "1rem", textAlign: "center", fontSize: "0.9rem" }}>
+            <span 
+              onClick={handleForgotPw} 
+              style={{ color: "#0066ff", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Wachtwoord vergeten?
+            </span>
+          </p>
 
-        <p style={{ marginTop: "1rem", textAlign: "center" }}>
-          Nog geen account?{" "}
-          <a href="/register" style={styles.link}>
-            Registreren
-          </a>
-        </p>
+          <p style={{ marginTop: "1rem", textAlign: "center", fontSize: "0.9rem", color: "#666" }}>
+            Nog geen account? <Link to="/register" style={{color: "#0066ff", fontWeight: "bold", textDecoration: "none"}}>Registreer hier</Link>
+          </p>
+        </div>
       </div>
     </div>
   );
 }
-
-const styles = {
-  wrapper: {
-    minHeight: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    background: "linear-gradient(180deg,#eef2ff,#dbe4ff)",
-    padding: 20,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 380,
-    background: "white",
-    padding: "2rem",
-    borderRadius: 14,
-    boxShadow: "0 4px 14px rgba(0,0,0,0.12)",
-  },
-  title: {
-    textAlign: "center",
-    marginBottom: "1.4rem",
-  },
-  input: {
-    width: "100%",
-    padding: "0.8rem",
-    borderRadius: 8,
-    border: "1px solid #ccc",
-    marginBottom: "1rem",
-  },
-  btnPrimary: {
-    width: "100%",
-    padding: "0.8rem",
-    background: "#004aad",
-    color: "white",
-    border: "none",
-    borderRadius: 8,
-    fontWeight: "bold",
-    cursor: "pointer",
-  },
-  btnGoogle: {
-    width: "100%",
-    padding: "0.8rem",
-    background: "#ffffff",
-    border: "1px solid #ccc",
-    borderRadius: 8,
-    cursor: "pointer",
-  },
-  btnLink: {
-    marginTop: "0.6rem",
-    background: "transparent",
-    border: "none",
-    color: "#004aad",
-    cursor: "pointer",
-    textDecoration: "underline",
-  },
-  hr: {
-    margin: "1.4rem 0",
-  },
-  alert: {
-    background: "#ffe6e6",
-    padding: "0.8rem",
-    borderRadius: 8,
-    border: "1px solid #ffbcbc",
-    marginBottom: "1rem",
-    color: "#aa0000",
-  },
-  link: {
-    color: "#004aad",
-    fontWeight: "bold",
-  },
-};

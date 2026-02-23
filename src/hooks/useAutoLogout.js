@@ -5,31 +5,21 @@ import { auth } from "../firebase";
 export function useAutoLogout(timeout = 10 * 60 * 1000) {
   const timer = useRef(null);
 
-  // Reset timer
-  const resetTimer = () => {
-    if (timer.current) clearTimeout(timer.current);
-
-    timer.current = setTimeout(() => {
-      console.log("Geen activiteit → automatisch uitloggen");
-      signOut(auth);
-    }, timeout);
-  };
-
   useEffect(() => {
-    // Activiteiten waar we naar luisteren
+    // resetTimer defined inside effect so it always captures current timeout value
+    const resetTimer = () => {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => {
+        signOut(auth);
+      }, timeout);
+    };
+
     const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
-
-    events.forEach(event => {
-      window.addEventListener(event, resetTimer);
-    });
-
-    // Eerste start
+    events.forEach(event => window.addEventListener(event, resetTimer));
     resetTimer();
 
     return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, resetTimer);
-      });
+      events.forEach(event => window.removeEventListener(event, resetTimer));
       if (timer.current) clearTimeout(timer.current);
     };
   }, [timeout]);

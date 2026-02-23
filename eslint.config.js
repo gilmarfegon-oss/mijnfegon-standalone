@@ -1,29 +1,51 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import { defineConfig, globalIgnores } from 'eslint/config'
+import js from "@eslint/js";
+import globals from "globals";
+import reactPlugin from "eslint-plugin-react";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactRefresh from "eslint-plugin-react-refresh";
 
-export default defineConfig([
-  globalIgnores(['dist']),
+export default [
+  // Apply to all JS/JSX source files
   {
-    files: ['**/*.{js,jsx}'],
-    extends: [
-      js.configs.recommended,
-      reactHooks.configs['recommended-latest'],
-      reactRefresh.configs.vite,
-    ],
+    files: ["src/**/*.{js,jsx}"],
+    plugins: {
+      react: reactPlugin,
+      "react-hooks": reactHooks,
+      "react-refresh": reactRefresh,
+    },
     languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.browser,
+      },
       parserOptions: {
-        ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
-        sourceType: 'module',
       },
     },
+    settings: {
+      react: { version: "detect" },
+    },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Base JS rules
+      ...js.configs.recommended.rules,
+
+      // React core
+      ...reactPlugin.configs.recommended.rules,
+      "react/react-in-jsx-scope": "off", // Not needed with React 17+ JSX transform
+      "react/prop-types": "warn",         // Catches missing prop validation (42x per review)
+
+      // React Hooks
+      ...reactHooks.configs.recommended.rules,
+
+      // React Refresh (Vite HMR)
+      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+
+      // Security & code quality
+      "no-unused-vars": ["warn", { varsIgnorePattern: "^_", argsIgnorePattern: "^_" }],
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-eval": "error",
+      "no-implied-eval": "error",
     },
   },
-])
+];

@@ -1,5 +1,5 @@
 // src/components/Admin/ImportExport/IEPoints.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 
@@ -11,8 +11,8 @@ export default function IEPoints() {
     const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     const csv = [
-      ["id", "email", "points"],
-      ...list.map((u) => [u.id, u.email, u.points || 0]),
+      ["id", "email", "points_total", "saldo"],
+      ...list.map((u) => [u.id, u.email, u.points_total || 0, u.saldo || 0]),
     ]
       .map((r) => r.join(","))
       .join("\n");
@@ -30,10 +30,11 @@ export default function IEPoints() {
     for (let line of rows) {
       if (!line.trim()) continue;
 
-      const [id, email, points] = line.split(",");
+      const [id, _email, pointsTotal, saldo] = line.split(",");
 
       await updateDoc(doc(db, "users", id), {
-        points: Number(points),
+        points_total: Number(pointsTotal),
+        saldo: Number(saldo || pointsTotal),
       });
     }
 

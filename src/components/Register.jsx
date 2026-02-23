@@ -1,24 +1,29 @@
-import React, { useState } from "react";
+// src/components/Register.jsx
+import { useState } from "react";
 import { auth, db } from "../firebase";
-import {
-  createUserWithEmailAndPassword,
-} from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { Link, useNavigate } from "react-router-dom";
+import { sendWelcomeEmail } from "../services/mailService";
 
 export default function Register() {
+  const navigate = useNavigate();
+
   const [form, setForm] = useState({
     name: "",
     company: "",
     email: "",
     password: "",
-    password2: ""
+    password2: "",
+    acceptTerms: false,
   });
 
   const [melding, setMelding] = useState("");
   const [loading, setLoading] = useState(false);
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
   }
 
   function validate() {
@@ -28,6 +33,7 @@ export default function Register() {
     if (!form.password || !form.password2) return "Vul een wachtwoord in.";
     if (form.password !== form.password2) return "Wachtwoorden komen niet overeen.";
     if (form.password.length < 6) return "Wachtwoord moet minimaal 6 tekens zijn.";
+    if (!form.acceptTerms) return "Akkoord met de voorwaarden is vereist.";
     return null;
   }
 
@@ -41,15 +47,21 @@ export default function Register() {
     try {
       setLoading(true);
 
-      // Maak gebruiker aan
-      const res = await createUserWithEmailAndPassword(auth, form.email, form.password);
+      // Maak gebruiker aan in Auth
+      const res = await createUserWithEmailAndPassword(
+        auth,
+        form.email,
+        form.password,
+      );
 
-      // Firestore user-doc
+      // Firestore user-doc met velden die ProfielAanvullen gebruikt
       await setDoc(doc(db, "users", res.user.uid), {
         uid: res.user.uid,
         email: form.email,
-        name: form.name,
-        company: form.company,
+        // Deze twee matchen nu met ProfielAanvullen.jsx
+        installer_full_name: form.name,
+        installer_company: form.company,
+        // Overige standaardvelden
         role: "user",
         points_total: 0,
         points_pending: 0,
@@ -58,14 +70,16 @@ export default function Register() {
         updatedAt: serverTimestamp(),
       });
 
+      sendWelcomeEmail(form.email, form.name);
       setMelding("✔ Account aangemaakt! Je wordt doorgestuurd...");
-      setTimeout(() => {
-        window.location.href = "/"; // App.jsx redirect naar ProfielAanvullen
-      }, 1200);
 
-    } catch (e) {
-      console.error(e);
-      setMelding("❌ Er ging iets mis: " + e.message);
+      // Direct naar profiel-aanvullen flow
+      setTimeout(() => {
+        navigate("/profiel-aanvullen");
+      }, 800);
+    } catch (err) {
+      console.error(err);
+      setMelding("❌ Er ging iets mis: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -121,6 +135,21 @@ export default function Register() {
           onChange={handleChange}
         />
 
+        <label style={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            name="acceptTerms"
+            checked={form.acceptTerms}
+            onChange={handleChange}
+          />
+          <span>
+            Ik ga akkoord met de{" "}
+            <Link to="/voorwaarden" target="_blank" rel="noopener noreferrer">algemene voorwaarden</Link>
+            {" "}en het{" "}
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer">privacybeleid</Link>.
+          </span>
+        </label>
+
         <button disabled={loading} style={styles.btnPrimary}>
           {loading ? "Bezig..." : "Account aanmaken"}
         </button>
@@ -132,7 +161,6 @@ export default function Register() {
     </div>
   );
 }
-
 
 const styles = {
   wrapper: {
@@ -180,5 +208,14 @@ const styles = {
     border: "1px solid #ffb0b0",
     color: "#b00000",
     marginBottom: "1rem",
+  },
+  checkboxLabel: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "0.6rem",
+    fontSize: "0.9rem",
+    color: "#374151",
+    cursor: "pointer",
+    marginBottom: "0.5rem",
   },
 };

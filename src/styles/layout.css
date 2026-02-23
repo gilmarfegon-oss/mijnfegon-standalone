@@ -1,0 +1,348 @@
+/* ================================
+   1. HARDE RESET & CENTRERING (JOUW NIEUWE CODE)
+   ================================ */
+html, body, #root {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  height: 100%;
+}
+
+body {
+  font-family: Inter, system-ui, sans-serif;
+  background: #f4f6fb;
+  color: #111827;
+}
+
+/* DE CONTAINER DIE ALLES CENTREERT */
+.container {
+  width: 100%;
+  max-width: 1200px; /* Maximale breedte van de content */
+  margin: 0 auto;    /* Dit centreert het blok horizontaal */
+  padding: 0 1.5rem;
+}
+
+/* ================================
+   2. HEADER & LOGO (JOUW NIEUWE CODE)
+   ================================ */
+.nav-header {
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  min-height: 80px;
+  display: flex;
+  justify-content: center; /* Zorgt dat de inhoud in het midden staat */
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+}
+
+.header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%; /* Vult de container */
+}
+
+/* LOGO FIX */
+.logo-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  text-decoration: none;
+}
+
+.logo-img {
+  height: 42px; /* Vaste hoogte */
+  width: auto;
+  object-fit: contain;
+  display: block; /* Voorkomt layout shifts */
+}
+
+.logo-divider {
+  font-size: 1.6rem;
+  color: #cbd5e1;
+  font-weight: 300;
+}
+
+/* ================================
+   3. LOGIN PAGINA SPECIFIEK (BEHOUDEN VOOR DE LAYOUT)
+   ================================ */
+.page-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.login-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: url('/achtergrond.png') no-repeat center center;
+  background-size: cover;
+  padding: 2rem;
+}
+
+/* Het specifieke witte kaartje voor login */
+.card-login {
+  background: #ffffff;
+  width: 100%;
+  max-width: 420px;
+  padding: 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+/* Zorgt dat inputs onder elkaar staan op login */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* ================================
+   4. DASHBOARD KAARTEN (JOUW NIEUWE CODE)
+   ================================ */
+.card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 2rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1.5rem;
+}
+
+/* Voeg toe aan src/styles/layout.css */
+
+/* Een bredere variant van de login kaart voor formulieren met 2 kolommen */
+.card-profile {
+  background: #ffffff;
+  width: 100%;
+  max-width: 600px; /* Iets breder dan login (420px) */
+  padding: 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 10;
+}
+
+/* Labels boven de inputs styling */
+.form-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #374151;
+  margin-bottom: 0.4rem;
+}
+
+/* Groepering voor velden naast elkaar (Voornaam + Achternaam etc) */
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-col {
+  flex: 1;
+}
+
+/* Zorg dat de check knop mooi naast het KVK veld staat */
+.kvk-wrapper {
+  display: flex;
+  gap: 10px;
+}
+
+/* ================================
+   5. ADMIN DROPDOWN & KNOPPEN
+   ================================ */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-wrapper { position: relative; }
+
+.admin-dropdown {
+  position: absolute;
+  top: calc(100% + 15px);
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  border: 1px solid #e5e7eb;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  z-index: 2000;
+  overflow: hidden;
+}
+
+.dropdown-title {
+  padding: 0.8rem 1.2rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #94a3b8;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.admin-dropdown a {
+  padding: 0.8rem 1.2rem;
+  text-decoration: none;
+  color: #1e293b;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.admin-dropdown a:hover {
+  background: #f1f5f9;
+  color: #0066ff;
+}
+
+/* ================================
+   6. ALGEMENE ELEMENTEN (INPUTS & KNOPPEN)
+   ================================ */
+.input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #0066ff;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+}
+
+.btn {
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: background 0.2s;
+  padding: 0.75rem 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn--primary { background-color: #0066ff; color: white; }
+.btn--primary:hover { background-color: #0052cc; }
+
+.btn-secondary {
+  background: #fff; 
+  border: 2px solid #0066ff; 
+  color: #0066ff;
+}
+
+.btn--danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+
+.login-separator {
+  margin: 1.5rem 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* ================================
+   7. RESPONSIVE
+   ================================ */
+@media (max-width: 600px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: inline-block !important; }
+  .logo-img { height: 30px; }
+  .nav-header { padding: 0.5rem 0; min-height: 60px; }
+  .container { padding: 0 1rem; }
+}
+
+/* ================================
+   12. FOOTER (NIEUW)
+   ================================ */
+
+.footer {
+  width: 100%;
+  background: #009ee3; /* De blauwe kleur uit je screenshot */
+  color: #ffffff;
+  padding: 1.5rem 0;
+  margin-top: auto; /* Zorgt dat hij altijd naar beneden duwt */
+  font-size: 0.9rem;
+}
+
+.footer-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* Zorgt dat het goed breekt op mobiel */
+  gap: 1rem;
+}
+
+.footer-links {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.footer-link {
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 700; /* Dikgedrukt zoals in screenshot */
+  transition: opacity 0.2s;
+}
+
+.footer-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.footer-copy {
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Mobiele aanpassingen voor footer */
+@media (max-width: 768px) {
+  .footer-flex {
+    flex-direction: column;
+    text-align: center;
+    gap: 1.5rem;
+  }
+  
+  .footer-links {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .footer-copy {
+    text-align: center;
+  }
+}

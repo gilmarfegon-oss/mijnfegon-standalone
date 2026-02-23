@@ -1,0 +1,145 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // ── Users ──────────────────────────────────────────────────────────────
+    match /users/{uid} {
+      // Users may only read their own document. Admins see all.
+      allow read: if isAuth() && (request.auth.uid == uid || isAdmin());
+
+      // Users create their own document on registration.
+      // Role must be 'user', all point/Compenda fields must be absent or zero.
+      allow create: if isAuth()
+                    && request.auth.uid == uid
+                    && request.resource.data.get('role', 'user') == 'user'
+                    && request.resource.data.get('points_total', 0) == 0
+                    && request.resource.data.get('points_pending', 0) == 0
+                    && request.resource.data.get('saldo', 0) == 0
+                    && !request.resource.data.keys().hasAny([
+                         'compenda_id', 'compenda_company_id',
+                         'welcome_points_awarded', 'birthday_points_year']);
+
+      // Users may update safe profile fields on their own document.
+      // Server-controlled fields are permanently blocked from client writes.
+      allow update: if isAuth()
+                    && request.auth.uid == uid
+                    && !request.resource.data.diff(resource.data)
+                        .affectedKeys()
+                        .hasAny([
+                          'role',
+                          'saldo',
+                          'points_total',
+                          'points_pending',
+                          'compenda_id',
+                          'compenda_company_id',
+                          'createdAt',
+                          // Points integrity: server-only award flags
+                          'welcome_points_awarded',
+                          'birthday_points_year',
+                          // profile_completed: users can set true but NOT reset to false
+                          // (enforced below as a separate condition)
+                        ])
+                    // Prevent resetting profile_completed to false once true
+                    && !(resource.data.get('profile_completed', false) == true
+                         && request.resource.data.get('profile_completed', true) == false);
+
+      // Admins may update any field on any user document.
+      allow update: if isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // ── Registrations ──────────────────────────────────────────────────────
+    match /registrations/{docId} {
+      // Installers may create registrations for themselves only.
+      // Status must be 'pending'; server-only fields are blocked.
+      allow create: if isAuth()
+                    && request.resource.data.installer_uid == request.auth.uid
+                    && request.resource.data.status == 'pending'
+                    && !request.resource.data.keys().hasAny([
+                         'points_awarded',
+                         'points_claimed',
+                         'synced_to_compenda',
+                         'compenda_id',
+                         'compenda_sync_date']);
+
+      // Installers can only read their own registrations.
+      allow read: if isAuth()
+                  && (resource.data.installer_uid == request.auth.uid || isAdmin());
+
+      // Only admins may update or delete registrations.
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Products (shop) ────────────────────────────────────────────────────
+    match /products/{docId} {
+      allow read:                   if isAuth();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ── Orders ─────────────────────────────────────────────────────────────
+    match /orders/{docId} {
+      allow create: if isAuth()
+                    && request.resource.data.userId == request.auth.uid;
+      allow read:   if isAuth()
+                    && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update,
+            delete: if isAdmin();
+    }
+
+    // ── Login logs ─────────────────────────────────────────────────────────
+    match /logs_login/{docId} {
+      allow create: if isAuth();
+      allow read:   if isAdmin();
+      allow update,
+            delete: if isAdmin();
+    }
+
+    // ── Admin action logs (append-only, immutable) ─────────────────────────
+    match /logs_admin/{docId} {
+      allow create: if isAdmin();
+      allow read:   if isAdmin();
+      allow update,
+            delete: if false;
+    }
+
+    // ── App settings ───────────────────────────────────────────────────────
+    match /settings/{docId} {
+      allow read:                   if isAuth();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ── Mail templates ─────────────────────────────────────────────────────
+    match /mailTemplates/{docId} {
+      allow read:                   if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ── Stats ──────────────────────────────────────────────────────────────
+    // total_logins may be incremented by any logged-in user.
+    // All other stats fields are admin-only.
+    match /stats/{docId} {
+      allow read: if isAuth();
+      allow update: if isAuth()
+                    && docId == "dashboard"
+                    && request.resource.data.diff(resource.data)
+                        .affectedKeys().hasOnly(['total_logins']);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ── Deny everything else ───────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,456 +1,202 @@
 // src/components/Admin/AdminProducten.jsx
-import React, { useEffect, useState } from "react";
-import { db } from "../../firebase";
-import {
-  collection,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  serverTimestamp,
+import { useEffect, useState } from "react";
+import PropTypes from "prop-types";
+import { db, storage } from "../../firebase"; 
+import { 
+  collection, addDoc, updateDoc, deleteDoc,
+  doc, onSnapshot, serverTimestamp, setDoc
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import AdminLayout from "./AdminLayout";
 
 export default function AdminProducten({ user }) {
   const [producten, setProducten] = useState([]);
-  const [nieuwProduct, setNieuwProduct] = useState({
+  const [categories, setCategories] = useState(["Cadeaubonnen", "Gereedschap", "Geluid", "Waterontharders", "Overig"]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  
+  const initialForm = {
     name: "",
     description: "",
     points: "",
     image: "",
+    category: "Overig",
     active: true,
-  });
-  const [bewerktProduct, setBewerktProduct] = useState(null);
-  const [melding, setMelding] = useState("");
+  };
 
-  // 🔹 Realtime producten ophalen
+  const [formData, setFormData] = useState(initialForm);
+
   useEffect(() => {
-    const ref = collection(db, "products");
+    // 1. Luister naar Producten
+    const unsubProds = onSnapshot(collection(db, "products"), (snap) => {
+      setProducten(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
 
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setProducten(data);
-      },
-      (error) => {
-        console.error("AdminProducten onSnapshot error:", error.code, error.message);
-        setMelding(
-          "❌ Kan producten niet laden (onvoldoende rechten of netwerkprobleem)."
-        );
+    // 2. Luister naar Categorieën (opgeslagen in settings/shop_config)
+    const unsubCats = onSnapshot(doc(db, "settings", "shop_config"), (snap) => {
+      if (snap.exists() && snap.data().categories) {
+        setCategories(snap.data().categories);
       }
-    );
+    });
 
-    return () => unsub();
+    return () => { unsubProds(); unsubCats(); };
   }, []);
 
-  // 🔹 Helper: melding tonen
-  const showMelding = (text) => {
-    setMelding(text);
-    if (text) {
-      setTimeout(() => setMelding(""), 4000);
+  // ➕ Nieuwe Categorie Toevoegen
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    if (categories.includes(newCategoryName.trim())) return alert("Categorie bestaat al");
+
+    const updatedCats = [...categories, newCategoryName.trim()];
+    try {
+      await setDoc(doc(db, "settings", "shop_config"), { categories: updatedCats }, { merge: true });
+      setNewCategoryName("");
+      alert("✅ Categorie toegevoegd");
+    } catch (err) {
+      alert("Fout bij toevoegen categorie: " + err.message);
     }
   };
 
-  // 🔹 Nieuw product toevoegen
-  async function voegProductToe() {
-    if (!nieuwProduct.name || !nieuwProduct.points) {
-      showMelding("⚠️ Vul ten minste een naam en aantal punten in.");
-      return;
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const storageRef = ref(storage, `products/${Date.now()}-${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setFormData({ ...formData, image: url });
+    } catch (err) {
+      alert("Upload fout: " + err.message);
+    } finally {
+      setUploading(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.points) return alert("Vul naam en punten in!");
 
     try {
-      await addDoc(collection(db, "products"), {
-        name: nieuwProduct.name.trim(),
-        description: nieuwProduct.description.trim(),
-        points: Number(nieuwProduct.points),
-        image: nieuwProduct.image.trim(),
-        active: nieuwProduct.active,
-        createdAt: serverTimestamp(),
-        createdBy: user ? user.uid : null,
-      });
-
-      setNieuwProduct({
-        name: "",
-        description: "",
-        points: "",
-        image: "",
-        active: true,
-      });
-
-      showMelding("✅ Product succesvol toegevoegd!");
-    } catch (err) {
-      console.error("voegProductToe error:", err);
-      showMelding("❌ Fout bij toevoegen: " + err.message);
-    }
-  }
-
-  // 🔹 Bestaand product opslaan
-  async function updateProduct() {
-    if (!bewerktProduct) return;
-
-    try {
-      const ref = doc(db, "products", bewerktProduct.id);
-      await updateDoc(ref, {
-        name: bewerktProduct.name.trim(),
-        description: bewerktProduct.description.trim(),
-        points: Number(bewerktProduct.points),
-        image: bewerktProduct.image.trim(),
-        active: !!bewerktProduct.active,
-        updatedAt: serverTimestamp(),
-        updatedBy: user ? user.uid : null,
-      });
-
-      setBewerktProduct(null);
-      showMelding("✅ Product succesvol bijgewerkt!");
-    } catch (err) {
-      console.error("updateProduct error:", err);
-      showMelding("❌ Fout bij bewerken: " + err.message);
-    }
-  }
-
-  // 🔹 Product verwijderen
-  async function verwijderProduct(id) {
-    if (!window.confirm("Weet je zeker dat je dit product wilt verwijderen?")) {
-      return;
-    }
-
-    try {
-      await deleteDoc(doc(db, "products", id));
-      showMelding("🗑️ Product verwijderd.");
-    } catch (err) {
-      console.error("verwijderProduct error:", err);
-      showMelding("❌ Fout bij verwijderen: " + err.message);
-    }
-  }
-
-  // 🔹 Toggle actief / inactief
-  async function toggleActive(product) {
-    try {
-      const ref = doc(db, "products", product.id);
-      await updateDoc(ref, {
-        active: !product.active,
-        updatedAt: serverTimestamp(),
-        updatedBy: user ? user.uid : null,
-      });
-    } catch (err) {
-      console.error("toggleActive error:", err);
-      showMelding("❌ Fout bij wijzigen van status: " + err.message);
-    }
-  }
+      if (editingId) {
+        await updateDoc(doc(db, "products", editingId), {
+          ...formData,
+          points: Number(formData.points),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        await addDoc(collection(db, "products"), {
+          ...formData,
+          points: Number(formData.points),
+          createdAt: serverTimestamp(),
+        });
+      }
+      setFormData(initialForm);
+      setEditingId(null);
+      alert("✅ Opgeslagen!");
+    } catch (err) { alert(err.message); }
+  };
 
   return (
-    <div style={styles.page}>
-      <h1>🛠️ Admin – Producten</h1>
-      <p style={{ color: "#555" }}>
-        Beheer alle producten die zichtbaar zijn in de Fegon Shop.
-      </p>
+    <AdminLayout user={user}>
+      <div style={{ padding: "1rem" }}>
+        <h1>🛠️ Product- & Categoriebeheer</h1>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+          
+          {/* PRODUCT FORMULIER */}
+          <div style={styles.card}>
+            <h3>{editingId ? "Product Bewerken" : "Nieuw Product"}</h3>
+            <form onSubmit={handleSubmit} style={styles.gridForm}>
+              <input style={styles.input} placeholder="Naam" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              
+              <select style={styles.input} value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
 
-      {/* ✅ Nieuw product toevoegen */}
-      <div style={styles.addBox}>
-        <h2>Nieuw product toevoegen</h2>
-        <input
-          style={styles.input}
-          placeholder="Naam van het product"
-          value={nieuwProduct.name}
-          onChange={(e) =>
-            setNieuwProduct({ ...nieuwProduct, name: e.target.value })
-          }
-        />
-        <textarea
-          style={styles.textarea}
-          placeholder="Beschrijving"
-          value={nieuwProduct.description}
-          onChange={(e) =>
-            setNieuwProduct({
-              ...nieuwProduct,
-              description: e.target.value,
-            })
-          }
-        />
-        <input
-          style={styles.input}
-          placeholder="Aantal punten (Fegon Drops)"
-          type="number"
-          value={nieuwProduct.points}
-          onChange={(e) =>
-            setNieuwProduct({ ...nieuwProduct, points: e.target.value })
-          }
-        />
-        <input
-          style={styles.input}
-          placeholder="Afbeelding URL (optioneel)"
-          value={nieuwProduct.image}
-          onChange={(e) =>
-            setNieuwProduct({ ...nieuwProduct, image: e.target.value })
-          }
-        />
-        <label style={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={nieuwProduct.active}
-            onChange={(e) =>
-              setNieuwProduct({ ...nieuwProduct, active: e.target.checked })
-            }
-          />
-          <span>Actief (zichtbaar in shop)</span>
-        </label>
-        <button onClick={voegProductToe} style={styles.saveBtn}>
-          ➕ Toevoegen
-        </button>
-      </div>
+              <input style={styles.input} type="number" placeholder="Drops" value={formData.points} onChange={e => setFormData({...formData, points: e.target.value})} />
+              
+              <div style={styles.uploadBox}>
+                <input type="file" onChange={handleImageUpload} />
+                {formData.image && <img src={formData.image} width="40" height="40" alt="thumb" />}
+              </div>
 
-      {/* 📋 Overzicht producten */}
-      <h2 style={{ marginTop: "2rem" }}>Bestaande producten</h2>
-      <div style={{ overflowX: "auto" }}>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Beschrijving</th>
-              <th>Punten</th>
-              <th>Afbeelding</th>
-              <th>Status</th>
-              <th>Acties</th>
-            </tr>
-          </thead>
-          <tbody>
-            {producten.map((p) => (
-              <tr key={p.id}>
-                <td>{p.name}</td>
-                <td>{p.description}</td>
-                <td>{p.points}</td>
-                <td>
-                  {p.image ? (
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      style={{
-                        width: 50,
-                        height: 50,
-                        objectFit: "cover",
-                        borderRadius: 6,
-                      }}
-                    />
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td>
-                  <span
-                    style={{
-                      padding: "0.2rem 0.6rem",
-                      borderRadius: 999,
-                      fontSize: 12,
-                      background: p.active ? "#e5ffe7" : "#ffe5e5",
-                      color: p.active ? "#0a7a26" : "#a00",
-                    }}
-                  >
-                    {p.active ? "Actief" : "Inactief"}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    style={styles.smallBtn}
-                    onClick={() => toggleActive(p)}
-                  >
-                    {p.active ? "Deactiveren" : "Activeren"}
-                  </button>
-                  <button
-                    style={styles.editBtn}
-                    onClick={() => setBewerktProduct(p)}
-                  >
-                    ✏️ Bewerken
-                  </button>
-                  <button
-                    style={styles.deleteBtn}
-                    onClick={() => verwijderProduct(p.id)}
-                  >
-                    🗑️ Verwijderen
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {producten.length === 0 && (
-              <tr>
-                <td colSpan="6" style={{ padding: "1rem", textAlign: "center" }}>
-                  Geen producten gevonden.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ✏️ Bewerken sectie */}
-      {bewerktProduct && (
-        <div style={styles.editBox}>
-          <h2>Product bewerken</h2>
-          <input
-            style={styles.input}
-            value={bewerktProduct.name}
-            onChange={(e) =>
-              setBewerktProduct({ ...bewerktProduct, name: e.target.value })
-            }
-          />
-          <textarea
-            style={styles.textarea}
-            value={bewerktProduct.description}
-            onChange={(e) =>
-              setBewerktProduct({
-                ...bewerktProduct,
-                description: e.target.value,
-              })
-            }
-          />
-          <input
-            style={styles.input}
-            type="number"
-            value={bewerktProduct.points}
-            onChange={(e) =>
-              setBewerktProduct({
-                ...bewerktProduct,
-                points: e.target.value,
-              })
-            }
-          />
-          <input
-            style={styles.input}
-            value={bewerktProduct.image}
-            onChange={(e) =>
-              setBewerktProduct({ ...bewerktProduct, image: e.target.value })
-            }
-          />
-          <label style={styles.checkboxRow}>
-            <input
-              type="checkbox"
-              checked={!!bewerktProduct.active}
-              onChange={(e) =>
-                setBewerktProduct({
-                  ...bewerktProduct,
-                  active: e.target.checked,
-                })
-              }
-            />
-            <span>Actief (zichtbaar in shop)</span>
-          </label>
-
-          <div style={{ display: "flex", gap: "1rem" }}>
-            <button onClick={updateProduct} style={styles.saveBtn}>
-              💾 Opslaan
-            </button>
-            <button
-              onClick={() => setBewerktProduct(null)}
-              style={styles.cancelBtn}
-            >
-              Annuleren
-            </button>
+              <textarea style={{...styles.input, gridColumn: 'span 2'}} placeholder="Beschrijving" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+              
+              <button type="submit" disabled={uploading} style={styles.btnPrimary}>Opslaan</button>
+            </form>
           </div>
-        </div>
-      )}
 
-      {melding && <p style={styles.message}>{melding}</p>}
-    </div>
+          {/* CATEGORIE BEHEER */}
+          <div style={styles.card}>
+            <h3>Categorieën</h3>
+            <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
+              <input 
+                style={{...styles.input, marginBottom: 0}} 
+                placeholder="Nieuwe cat..." 
+                value={newCategoryName} 
+                onChange={e => setNewCategoryName(e.target.value)} 
+              />
+              <button onClick={handleAddCategory} style={{...styles.btnPrimary, marginTop: 0, width: 'auto'}}>Add</button>
+            </div>
+            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              {categories.map(cat => (
+                <div key={cat} style={{ padding: '5px', borderBottom: '1px solid #eee', fontSize: '0.9rem' }}>
+                  • {cat}
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+        {/* TABEL */}
+        <div style={{...styles.card, marginTop: '20px'}}>
+          <table style={styles.table}>
+            <thead>
+              <tr style={{ textAlign: 'left' }}>
+                <th>Foto</th>
+                <th>Naam</th>
+                <th>Categorie</th>
+                <th>Drops</th>
+                <th>Actie</th>
+              </tr>
+            </thead>
+            <tbody>
+              {producten.map(p => (
+                <tr key={p.id} style={{ borderTop: '1px solid #eee' }}>
+                  <td><img src={p.image} width="40" alt="p" /></td>
+                  <td>{p.name}</td>
+                  <td><small>{p.category}</small></td>
+                  <td>{p.points}</td>
+                  <td>
+                    <button onClick={() => { setEditingId(p.id); setFormData(p); }} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>✏️</button>
+                    <button onClick={() => deleteDoc(doc(db, "products", p.id))} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>🗑️</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </AdminLayout>
   );
 }
 
+AdminProducten.propTypes = {
+  user: PropTypes.shape({
+    uid: PropTypes.string,
+    email: PropTypes.string,
+    displayName: PropTypes.string,
+  }),
+};
+
 const styles = {
-  page: {
-    fontFamily: "Inter, system-ui, sans-serif",
-    padding: "2rem",
-    background: "#f4f6fb",
-    minHeight: "100vh",
-  },
-  addBox: {
-    background: "#fff",
-    padding: "1.5rem",
-    borderRadius: 12,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-    marginBottom: "2rem",
-  },
-  editBox: {
-    background: "#fff8e1",
-    padding: "1.5rem",
-    borderRadius: 12,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-    marginTop: "2rem",
-  },
-  input: {
-    width: "100%",
-    padding: "0.6rem",
-    borderRadius: 8,
-    border: "1px solid #ccc",
-    marginBottom: "0.8rem",
-  },
-  textarea: {
-    width: "100%",
-    height: "80px",
-    padding: "0.6rem",
-    borderRadius: 8,
-    border: "1px solid #ccc",
-    marginBottom: "0.8rem",
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    background: "#fff",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-  },
-  saveBtn: {
-    background: "#004aad",
-    color: "#fff",
-    border: "none",
-    borderRadius: 8,
-    padding: "0.6rem 1.2rem",
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-  cancelBtn: {
-    background: "#ccc",
-    color: "#000",
-    border: "none",
-    borderRadius: 8,
-    padding: "0.6rem 1.2rem",
-    cursor: "pointer",
-  },
-  smallBtn: {
-    background: "#1976d2",
-    color: "#fff",
-    border: "none",
-    borderRadius: 6,
-    padding: "0.3rem 0.6rem",
-    cursor: "pointer",
-    marginRight: "0.4rem",
-    fontSize: 12,
-  },
-  editBtn: {
-    background: "#ff9800",
-    color: "#fff",
-    border: "none",
-    borderRadius: 6,
-    padding: "0.4rem 0.8rem",
-    cursor: "pointer",
-    marginRight: "0.4rem",
-  },
-  deleteBtn: {
-    background: "#e53935",
-    color: "#fff",
-    border: "none",
-    borderRadius: 6,
-    padding: "0.4rem 0.8rem",
-    cursor: "pointer",
-  },
-  checkboxRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.4rem",
-    marginBottom: "0.8rem",
-    fontSize: 14,
-  },
-  message: {
-    marginTop: "1rem",
-    textAlign: "center",
-    color: "#004aad",
-    fontWeight: "bold",
-  },
+  card: { background: "#fff", padding: "1.5rem", borderRadius: "12px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  gridForm: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" },
+  input: { padding: "10px", borderRadius: "8px", border: "1px solid #ddd", marginBottom: "10px" },
+  btnPrimary: { background: "#004aad", color: "#fff", border: "none", padding: "10px", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" },
+  table: { width: "100%", borderCollapse: "collapse", marginTop: "10px" },
+  uploadBox: { background: '#f9f9f9', padding: '5px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px' }
 };

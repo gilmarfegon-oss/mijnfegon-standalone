@@ -1,249 +1,223 @@
-// src/components/Dashboard.jsx
-import React, { useEffect, useState } from "react";
-import { auth, db } from "../firebase";
-import { signOut } from "firebase/auth";
-import {
-  doc,
-  onSnapshot,
-  collection,
-  query,
-  where,
-  getCountFromServer,
-} from "firebase/firestore";
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import PropTypes from "prop-types";
+import { db } from "../firebase";
+import { collection, onSnapshot, doc, query, where } from "firebase/firestore";
+import { Link } from "react-router-dom";
 
-export default function Dashboard({ user, role }) {
-  const [punten, setPunten] = useState(0);
-  const [registratiesAantal, setRegistratiesAantal] = useState(0);
-  const [inAfwachting, setInAfwachting] = useState(0);
-  const [bedrijf, setBedrijf] = useState("");
-  const [melding, setMelding] = useState("");
-  const navigate = useNavigate();
+export default function Dashboard({ user }) {
+  const [userData, setUserData] = useState(null);
+  const [registraties, setRegistraties] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
 
-    // ✅ Haal punten + bedrijf uit gebruiker
-    const userRef = doc(db, "users", user.uid);
-    const unsubUser = onSnapshot(
-      userRef,
-      (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          setPunten(data.points_total || 0);
-          setBedrijf(data.company || "Onbekend bedrijf");
-        }
-      },
-      (error) => {
-    console.error("Dashboard user onSnapshot error:", error.code, error.message);
-  }
-);
-
-    // ✅ Tellen totaal aantal registraties
-    async function telRegistraties() {
-      try {
-        const q = query(
-          collection(db, "registrations"),
-          where("installer_uid", "==", user.uid)
-        );
-        const snapshot = await getCountFromServer(q);
-        setRegistratiesAantal(snapshot.data().count);
-      } catch (err) {
-        console.warn("Registraties tellen mislukt:", err);
+    // 1. Haal profiel data op
+    const unsubUser = onSnapshot(doc(db, "users", user.uid), (snap) => {
+      if (snap.exists()) {
+        setUserData(snap.data());
       }
-    }
+    }, (error) => console.error(error));
 
-    // ✅ Tellen in afwachting
-    async function telInAfwachting() {
-      try {
-        const q = query(
-          collection(db, "registrations"),
-          where("installer_uid", "==", user.uid),
-          where("status", "==", "pending")
-        );
-        const snapshot = await getCountFromServer(q);
-        setInAfwachting(snapshot.data().count);
-      } catch (err) {
-        console.warn("In afwachting tellen mislukt:", err);
-      }
-    }
+    // 2. Haal registraties op
+    const regsRef = collection(db, "registrations");
+    const q = query(regsRef, where("installer_uid", "==", user.uid));
 
-    telRegistraties();
-    telInAfwachting();
+    const unsubRegs = onSnapshot(q, (snap) => {
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sorteren op datum (nieuwste eerst)
+      docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      setRegistraties(docs);
+      setLoading(false);
+    }, (error) => {
+      console.error(error);
+      setLoading(false);
+    });
 
-    return () => {
-      unsubUser();
-    };
+    return () => { unsubUser(); unsubRegs(); };
   }, [user]);
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    navigate("/");
-  };
+  if (loading) return <div className="container" style={{textAlign: "center", padding: "5rem"}}>Dashboard laden...</div>;
+
+  const fullName = userData?.firstName 
+    ? `${userData.firstName} ${userData.lastName || ""}` 
+    : "Installateur";
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <header style={styles.header}>
-          <div>
-            <h1 style={styles.titel}>
-              Welkom terug, {user.displayName || user.email} 👋
-            </h1>
-            <p style={styles.subtitel}>
-              Laatste inlog: {new Date().toLocaleString()}
-            </p>
+    // ✅ CENTRERING FIX: margin: 0 auto en max-width correct ingesteld
+    <div className="container" style={{ paddingTop: "2rem", maxWidth: "1000px", margin: "0 auto" }}>
+      
+      {/* 1. Welkom Header */}
+      <header style={{ marginBottom: "2rem", textAlign: "center" }}>
+        <h1 style={{ margin: "0 0 5px 0", fontSize: "2rem", color: "#111827" }}>
+          Welkom, {fullName} 👋
+        </h1>
+        <div style={{ fontSize: "1.1rem", color: "#6b7280", fontWeight: "500" }}>
+           🏢 {userData?.company_name || "Bedrijf onbekend"}
+        </div>
+      </header>
+
+      {/* 2. Saldo Kaart */}
+      <div className="card" style={styles.pointsCard}>
+        <div style={{fontSize: '0.9rem', textTransform: 'uppercase', opacity: 0.9, letterSpacing: '1px'}}>Huidig Saldo</div>
+        <div style={{ fontSize: "3rem", fontWeight: "bold", margin: '5px 0' }}>
+          {userData?.saldo ?? userData?.points_total ?? 0} <span style={{fontSize: '1.5rem', fontWeight: '400'}}>Drops</span>
+        </div>
+        {userData?.points_pending > 0 && (
+          <div style={{fontSize: '0.9rem', background: "rgba(255,255,255,0.2)", padding: "4px 10px", borderRadius: "20px", display: "inline-block"}}>
+            ⏳ {userData.points_pending} Drops in behandeling
           </div>
-
-          <button onClick={handleLogout} style={styles.logoutBtn}>
-            Uitloggen
-          </button>
-        </header>
-
-        <section style={styles.cards}>
-          <div style={styles.card}>
-            <h2>💰 Beschikbare punten</h2>
-            <p style={styles.bigText}>{punten}</p>
-          </div>
-
-          <div style={styles.card}>
-            <h2>🔧 Registraties totaal</h2>
-            <p style={styles.bigText}>{registratiesAantal}</p>
-          </div>
-
-          <div style={styles.card}>
-            <h2>⏳ In afwachting</h2>
-            <p style={styles.bigText}>{inAfwachting}</p>
-          </div>
-
-          <div style={styles.card}>
-            <h2>🏢 Bedrijf</h2>
-            <p>{bedrijf}</p>
-          </div>
-        </section>
-
-        <section style={styles.actions}>
-          <Link to="/registratie" style={styles.button}>
-            ➕ Nieuw apparaat registreren
-          </Link>
-          <Link to="/shop" style={styles.buttonOutline}>
-            🛍️ Naar shop
-          </Link>
-          <Link to="/instellingen" style={styles.buttonOutline}>
-            ⚙️ Instellingen
-          </Link>
-          {role === "admin" && (
-            <Link to="/admin" style={styles.adminBtn}>
-              👑 Adminpaneel
-            </Link>
-          )}
-        </section>
-
-        {melding && <p style={styles.melding}>{melding}</p>}
+        )}
       </div>
+
+      {/* 3. Hoofdknoppen */}
+      <div style={styles.gridMain}>
+        <Link to="/registratie-product" className="btn-secondary" style={styles.mainBtn}>
+          <span style={{fontSize: '2rem', marginBottom: '10px'}}>➕</span>
+          Nieuwe Registratie
+        </Link>
+        <Link to="/shop" className="btn-secondary" style={styles.mainBtn}>
+          <span style={{fontSize: '2rem', marginBottom: '10px'}}>🛍️</span>
+          Naar de Shop
+        </Link>
+      </div>
+
+      {/* 4. Subknoppen */}
+      <div style={styles.gridSub}>
+        <Link to="/mijn-bestellingen" className="btn" style={styles.subBtn}>
+          📦 Mijn Bestellingen
+        </Link>
+        <Link to="/mijn-registraties" className="btn" style={styles.subBtn}>
+          📋 Mijn Registraties
+        </Link>
+        <Link to="/instellingen" className="btn" style={styles.subBtn}>
+          ⚙️ Instellingen
+        </Link>
+      </div>
+
+      {/* 5. Laatste activiteiten */}
+      <section style={{ marginTop: "3rem" }}>
+        <h3 style={{ borderBottom: "2px solid #e5e7eb", paddingBottom: "12px", marginBottom: "20px", color: "#374151" }}>
+          Laatste activiteiten
+        </h3>
+
+        <div style={styles.listContainer}>
+          {registraties.length > 0 ? (
+            registraties.slice(0, 5).map((reg) => (
+              <div key={reg.id} className="card" style={styles.listItem}>
+                <div style={{flex: 1}}>
+                  <div style={{ fontWeight: "600", color: "#111827", fontSize: "1.05rem" }}>
+                    {reg.product_brand || reg.brand || "Product"} {reg.product_model || reg.model || ""}
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "#6b7280", marginTop: "4px" }}>
+                    SN: {reg.product_serial_number || reg.serial || "---"}
+                  </div>
+                </div>
+                
+                <div style={{ textAlign: "right" }}>
+                  <div style={{
+                    fontWeight: "bold",
+                    fontSize: '1.2rem',
+                    color: reg.status === 'approved' ? "#0066ff" : reg.status === 'rejected' ? "#9ca3af" : "#f59e0b"
+                  }}>
+                    {reg.status === 'approved'
+                      ? `+${reg.points_awarded ?? 50}`
+                      : reg.status === 'rejected'
+                        ? "—"
+                        : "⏳"}
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                    {reg.created_at?.toDate
+                      ? reg.created_at.toDate().toLocaleDateString("nl-NL")
+                      : reg.createdAt?.toDate
+                        ? reg.createdAt.toDate().toLocaleDateString("nl-NL")
+                        : "Recent"}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="card" style={{ padding: "3rem", textAlign: "center", color: "#6b7280", background: "#f9fafb" }}>
+              Nog geen registraties gevonden.
+            </div>
+          )}
+        </div>
+      </section>
+
     </div>
   );
 }
 
+Dashboard.propTypes = {
+  user: PropTypes.shape({
+    uid: PropTypes.string,
+    email: PropTypes.string,
+    displayName: PropTypes.string,
+  }),
+};
+
 const styles = {
-  page: {
-    fontFamily: "Inter, system-ui, sans-serif",
-    background: "linear-gradient(180deg, #f7f9fc 0%, #eef3fb 100%)",
-    minHeight: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    padding: "2rem",
-  },
-  container: {
-    width: "100%",
-    maxWidth: "1100px",
-    background: "white",
-    borderRadius: "20px",
-    boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+  pointsCard: {
+    background: "linear-gradient(135deg, #0066ff 0%, #004aad 100%)",
+    color: "#fff",
     padding: "2.5rem",
+    borderRadius: "16px",
+    marginBottom: "2rem",
+    textAlign: "center",
+    boxShadow: "0 10px 25px rgba(0, 102, 255, 0.2)"
   },
-  header: {
+  gridMain: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "1.5rem",
+    marginBottom: "1.5rem"
+  },
+  mainBtn: {
+    padding: "2rem",
+    borderRadius: "16px",
+    flexDirection: "column",
+    height: "auto",
+    border: "2px solid #e2e8f0",
+    color: "#0066ff",
+    fontSize: "1.1rem",
+    fontWeight: "600",
+    textDecoration: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "#fff",
+    transition: "transform 0.2s, box-shadow 0.2s"
+  },
+  gridSub: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr",
+    gap: "1.5rem"
+  },
+  subBtn: {
+    backgroundColor: "#fff",
+    color: "#374151",
+    padding: "1.2rem",
+    fontSize: "1rem",
+    border: "1px solid #e2e8f0",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+    textDecoration: "none",
+    textAlign: "center",
+    borderRadius: "12px",
+    display: "block",
+    fontWeight: "500"
+  },
+  listContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "1rem"
+  },
+  listItem: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    background: "#fdfdfd",
-    padding: "1.5rem 2rem",
-    borderRadius: "14px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-    marginBottom: "2rem",
-  },
-  titel: {
-    margin: 0,
-    fontSize: "1.8rem",
-    color: "#003366",
-    fontWeight: 700,
-  },
-  subtitel: {
-    margin: 0,
-    color: "#666",
-    fontSize: "0.9rem",
-  },
-  logoutBtn: {
-    background: "#e53935",
-    color: "#fff",
-    border: "none",
-    borderRadius: 8,
-    padding: "0.7rem 1.4rem",
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-  cards: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-    gap: "1.5rem",
-    marginBottom: "2rem",
-  },
-  card: {
-    background: "#fff",
-    borderRadius: 14,
-    padding: "1.6rem",
-    textAlign: "center",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-  },
-  bigText: {
-    fontSize: "2.2rem",
-    fontWeight: 700,
-    color: "#004aad",
-    marginTop: "0.6rem",
-  },
-  actions: {
-    display: "flex",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: "1rem",
-  },
-  button: {
-    background: "#004aad",
-    color: "#fff",
-    borderRadius: 8,
-    padding: "0.9rem 1.6rem",
-    textDecoration: "none",
-    fontWeight: 600,
-  },
-  buttonOutline: {
-    border: "2px solid #004aad",
-    color: "#004aad",
-    borderRadius: 8,
-    padding: "0.9rem 1.6rem",
-    textDecoration: "none",
-    fontWeight: 600,
-    background: "transparent",
-  },
-  adminBtn: {
-    background: "#ff9800",
-    color: "#fff",
-    borderRadius: 8,
-    padding: "0.9rem 1.6rem",
-    textDecoration: "none",
-    fontWeight: 600,
-  },
-  melding: {
-    marginTop: "1.5rem",
-    textAlign: "center",
-    color: "#004aad",
-  },
+    padding: "1.2rem",
+    marginBottom: 0,
+    border: "1px solid #f3f4f6",
+    boxShadow: "none"
+  }
 };

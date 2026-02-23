@@ -1,550 +1,170 @@
-// src/components/Shop.jsx
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  runTransaction,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db } from "../firebase";
+import { useEffect, useState, useMemo } from "react";
+import PropTypes from "prop-types";
+import { db, functions } from "../firebase";
+import { collection, onSnapshot, doc } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 
 export default function Shop({ user }) {
   const [products, setProducts] = useState([]);
-  const [points, setPoints] = useState(0); // points_total van de gebruiker
-  const [cart, setCart] = useState({}); // { productId: quantity }
+  const [userData, setUserData] = useState(null);
+  const [categories, setCategories] = useState(["Alles"]); 
+  const [activeCategory, setActiveCategory] = useState("Alles");
   const [loading, setLoading] = useState(true);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [ordering, setOrdering] = useState(false);
 
-  // ✅ Helper: veilige prijs in punten
-  const getProductPrice = (product) => {
-    const raw = product?.points ?? product?.priceDrops ?? 0;
-    const num = Number(raw);
-    return Number.isFinite(num) && num >= 0 ? num : 0;
-  };
+  const MIN_BALANCE_REQUIRED = 250;
 
-  // -------------------------
-  // Data ophalen (user + producten)
-  // -------------------------
   useEffect(() => {
     if (!user) return;
 
-    async function loadData() {
-      try {
-        setLoading(true);
-        setError("");
+    const unsubUser = onSnapshot(doc(db, "users", user.uid), (snap) => {
+      if (snap.exists()) setUserData(snap.data());
+    });
 
-        // 1. punten van user ophalen (points_total)
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
+    const unsubProd = onSnapshot(collection(db, "products"), (snap) => {
+      setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.active !== false));
+      setLoading(false);
+    });
 
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          const raw = data.points_total ?? 0;
-          const num = Number(raw);
-          setPoints(Number.isFinite(num) ? num : 0);
-        } else {
-          setPoints(0);
-        }
-
-        // 2. producten ophalen
-        const productsRef = collection(db, "products");
-        const productsSnap = await getDocs(productsRef);
-
-        const list = productsSnap.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((p) => p.active !== false);
-
-        setProducts(list);
-      } catch (err) {
-        console.error("Fout bij laden shop:", err);
-        setError("Er ging iets mis bij het laden van de shop.");
-      } finally {
-        setLoading(false);
+    const unsubCats = onSnapshot(doc(db, "settings", "shop_config"), (snap) => {
+      if (snap.exists() && snap.data().categories) {
+        setCategories(["Alles", ...snap.data().categories]);
       }
-    }
+    });
 
-    loadData();
+    return () => { unsubUser(); unsubProd(); unsubCats(); };
   }, [user]);
 
-  // -------------------------
-  // Winkelwagen functies
-  // -------------------------
-  const addToCart = (productId) => {
-    setCart((prev) => ({
-      ...prev,
-      [productId]: (prev[productId] || 0) + 1,
-    }));
-  };
+  const filteredProducts = useMemo(() => {
+    if (activeCategory === "Alles") return products;
+    return products.filter(p => p.category === activeCategory);
+  }, [products, activeCategory]);
 
-  const removeFromCart = (productId) => {
-    setCart((prev) => {
-      const copy = { ...prev };
-      delete copy[productId];
-      return copy;
-    });
-  };
+  const buyProduct = async (product) => {
+    const currentSaldo = userData?.saldo || 0;
 
-  const updateQuantity = (productId, value) => {
-    const qty = Number(value);
-    if (isNaN(qty) || qty <= 0) {
-      return removeFromCart(productId);
-    }
-    setCart((prev) => ({ ...prev, [productId]: qty }));
-  };
-
-  const cartItems = useMemo(() => {
-    return Object.entries(cart)
-      .map(([id, quantity]) => {
-        const product = products.find((p) => p.id === id);
-        if (!product) return null;
-
-        const price = getProductPrice(product);
-        const lineTotal = price * quantity;
-
-        return {
-          ...product,
-          quantity,
-          price,
-          lineTotal,
-        };
-      })
-      .filter((item) => item !== null);
-  }, [cart, products]);
-
-  const cartTotal = useMemo(() => {
-    const sum = cartItems.reduce((acc, item) => {
-      const lt = Number(item.lineTotal);
-      return acc + (Number.isFinite(lt) ? lt : 0);
-    }, 0);
-    return sum;
-  }, [cartItems]);
-
-  const enoughPoints = points >= cartTotal;
-
-  // -------------------------
-  // Checkout
-  // -------------------------
-  const handleCheckout = async () => {
-    if (cartItems.length === 0) {
-      setError("Je winkelwagen is leeg.");
+    if (currentSaldo < MIN_BALANCE_REQUIRED) {
+      alert(`Je saldo is te laag.\n\nMinimaal ${MIN_BALANCE_REQUIRED} Drops nodig.`);
       return;
     }
 
-    if (!enoughPoints) {
-      setError("Onvoldoende Fegon Drops.");
+    if (currentSaldo < (product.price || product.points)) {
+      alert("Onvoldoende Drops.");
       return;
     }
 
-    setError("");
-    setSuccessMessage("");
-    setCheckoutLoading(true);
+    if (!window.confirm(`Wil je ${product.name} kopen?`)) return;
 
+    setOrdering(true);
     try {
-      const userRef = doc(db, "users", user.uid);
-      const ordersRef = collection(db, "orders");
-
-      await runTransaction(db, async (transaction) => {
-        const userSnap = await transaction.get(userRef);
-        if (!userSnap.exists()) {
-          throw new Error("Gebruiker niet gevonden.");
-        }
-
-        const data = userSnap.data();
-        const rawCurrent = data.points_total ?? 0;
-        const current = Number(rawCurrent);
-
-        if (!Number.isFinite(current) || current < cartTotal) {
-          throw new Error(
-            "Onvoldoende Fegon Drops. Je saldo is tussentijds gewijzigd."
-          );
-        }
-
-        const newBalance = current - cartTotal;
-
-        transaction.update(userRef, { points_total: newBalance });
-
-        const orderRef = doc(ordersRef);
-        transaction.set(orderRef, {
-          userId: user.uid,
-          items: cartItems.map((item) => ({
-            productId: item.id,
-            name: item.name,
-            points: item.price,
-            quantity: item.quantity,
-          })),
-          totalPoints: cartTotal,
-          createdAt: serverTimestamp(),
-          status: "completed",
-        });
-
-        setPoints(newBalance);
-      });
-
-      setCart({});
-      setSuccessMessage("Bestelling succesvol geplaatst! 🎉");
+      const purchase = httpsCallable(functions, "purchaseProduct");
+      await purchase({ productId: product.id });
+      alert("Bestelling geplaatst!");
     } catch (err) {
-      console.error("Checkout fout:", err);
-      setError(err.message || "Er ging iets mis bij het afrekenen.");
+      const msg = err.message || "Er ging iets mis.";
+      alert("Fout: " + msg);
     } finally {
-      setCheckoutLoading(false);
+      setOrdering(false);
     }
   };
 
-  // -------------------------
-  // UI
-  // -------------------------
-  if (loading) {
-    return <p style={{ padding: 20 }}>🛒 Shop wordt geladen...</p>;
-  }
+  if (loading) return <div className="container" style={{padding: '2rem'}}>Shop laden...</div>;
+
+  const currentPoints = userData?.saldo || 0;
+  const isLocked = currentPoints < MIN_BALANCE_REQUIRED;
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <header style={styles.header}>
-          <div>
-            <h1 style={styles.title}>Fegon Shop</h1>
-            <p style={styles.subtitle}>
-              Wissel je Fegon Drops in voor producten en beloningen.
-            </p>
-          </div>
-          <div style={styles.balanceCard}>
-            <span style={styles.balanceLabel}>Saldo</span>
-            <span style={styles.balanceValue}>
-              {points.toLocaleString()} Drops
-            </span>
-          </div>
-        </header>
-
-        {error && (
-          <div style={{ ...styles.alert, ...styles.alertError }}>{error}</div>
-        )}
-
-        {successMessage && (
-          <div style={{ ...styles.alert, ...styles.alertSuccess }}>
-            {successMessage}
-          </div>
-        )}
-
-        <div style={styles.grid}>
-          {/* Producten */}
-          <section style={styles.leftCol}>
-            <h2 style={styles.sectionTitle}>Producten</h2>
-            {products.length === 0 ? (
-              <p>Er zijn nog geen producten beschikbaar.</p>
-            ) : (
-              <div style={styles.productsGrid}>
-                {products.map((product) => {
-                  const price = getProductPrice(product);
-                  return (
-                    <div key={product.id} style={styles.productCard}>
-                      <div>
-                        <h3 style={styles.productTitle}>{product.name}</h3>
-                        {product.description && (
-                          <p style={styles.productDescription}>
-                            {product.description}
-                          </p>
-                        )}
-                      </div>
-                      <div style={styles.productFooter}>
-                        <div>
-                          <span style={styles.priceValue}>{price}</span>
-                          <span style={styles.priceLabel}>Drops</span>
-                        </div>
-                        <button
-                          onClick={() => addToCart(product.id)}
-                          style={styles.primaryButton}
-                        >
-                          In winkelwagen
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-
-          {/* Winkelwagen */}
-          <section style={styles.rightCol}>
-            <h2 style={styles.sectionTitle}>Winkelwagen</h2>
-            {cartItems.length === 0 ? (
-              <p>Je winkelwagen is leeg.</p>
-            ) : (
-              <>
-                <div style={styles.cartList}>
-                  {cartItems.map((item) => (
-                    <div key={item.id} style={styles.cartItem}>
-                      <div>
-                        <div style={styles.cartItemTitle}>{item.name}</div>
-                        <div style={styles.cartItemMeta}>
-                          {item.price} Drops per stuk
-                        </div>
-                      </div>
-                      <div style={styles.cartItemControls}>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            updateQuantity(item.id, e.target.value)
-                          }
-                          style={styles.qtyInput}
-                        />
-                        <div style={styles.cartItemTotal}>
-                          {item.lineTotal} Drops
-                        </div>
-                        <button
-                          onClick={() => removeFromCart(item.id)}
-                          style={styles.removeButton}
-                          title="Verwijderen"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={styles.cartSummary}>
-                  <div>
-                    <div style={styles.summaryLabel}>Totaal</div>
-                    <div style={styles.summaryValue}>
-                      {cartTotal.toLocaleString()} Drops
-                    </div>
-                    {!enoughPoints && (
-                      <div style={styles.summaryWarning}>
-                        Onvoldoende saldo voor deze bestelling.
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={handleCheckout}
-                    disabled={!enoughPoints || checkoutLoading}
-                    style={{
-                      ...styles.primaryButton,
-                      ...( !enoughPoints || checkoutLoading
-                        ? styles.primaryButtonDisabled
-                        : {} ),
-                    }}
-                  >
-                    {checkoutLoading ? "Bezig met afrekenen..." : "Afrekenen"}
-                  </button>
-                </div>
-              </>
-            )}
-          </section>
+    <div className="container" style={{ padding: "2rem 1rem", maxWidth: '1000px' }}>
+      <header style={styles.header}>
+        <div>
+          <h1 style={{ margin: 0 }}>Fegon Shop</h1>
+          <p style={{ color: '#666' }}>Wissel je Drops in voor mooie extra&apos;s</p>
         </div>
+        <div style={{...styles.pointsBadge, background: isLocked ? '#e53e3e' : '#004aad'}}>
+          <span style={{ fontSize: '0.8rem', display: 'block', opacity: 0.9 }}>Jouw saldo:</span>
+          <strong>{currentPoints} Drops</strong>
+        </div>
+      </header>
+
+      {isLocked && (
+        <div style={styles.lockedBanner}>
+          🔒 <strong>Shop vergrendeld:</strong> Je hebt minimaal {MIN_BALANCE_REQUIRED} Drops nodig om te kunnen bestellen.
+        </div>
+      )}
+
+      <div style={styles.filterBar}>
+        {categories.map(cat => (
+          <button 
+            key={cat} 
+            onClick={() => setActiveCategory(cat)} 
+            style={{
+              ...styles.filterBtn,
+              background: activeCategory === cat ? '#004aad' : '#fff',
+              color: activeCategory === cat ? '#fff' : '#004aad'
+            }}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      <div style={styles.grid}>
+        {filteredProducts.map(p => (
+          <div key={p.id} style={{...styles.card, opacity: isLocked ? 0.7 : 1}}>
+            <div style={styles.imageWrapper}>
+              <img 
+                src={p.image || p.imageUrl || "https://via.placeholder.com/300x200?text=Geen+foto"} 
+                style={styles.image} 
+                alt={p.name} 
+              />
+            </div>
+            <div style={styles.cardContent}>
+              <h3 style={styles.title}>{p.name}</h3>
+              <p style={styles.desc}>{p.description}</p>
+              <div style={styles.footer}>
+                <span style={styles.price}>{p.price || p.points} Drops</span>
+                <button 
+                  onClick={() => buyProduct(p)} 
+                  style={{
+                    ...styles.buyBtn, 
+                    background: isLocked ? '#ccc' : '#004aad',
+                    cursor: isLocked ? 'not-allowed' : 'pointer'
+                  }}
+                  disabled={isLocked || ordering}
+                >
+                  {isLocked ? "🔒" : ordering ? "..." : "Koop"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
+Shop.propTypes = {
+  user: PropTypes.shape({
+    uid: PropTypes.string,
+    email: PropTypes.string,
+    displayName: PropTypes.string,
+  }),
+};
+
 const styles = {
-  page: {
-    fontFamily: "Inter, system-ui, sans-serif",
-    background: "#f4f6fb",
-    minHeight: "100vh",
-    padding: "2rem 1rem",
-  },
-  container: {
-    maxWidth: 1100,
-    margin: "0 auto",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "1.5rem",
-    alignItems: "center",
-    marginBottom: "1.5rem",
-  },
-  title: {
-    margin: 0,
-    fontSize: "1.8rem",
-  },
-  subtitle: {
-    margin: "0.4rem 0 0",
-    color: "#555",
-    fontSize: "0.95rem",
-  },
-  balanceCard: {
-    background: "#fff",
-    padding: "0.9rem 1.2rem",
-    borderRadius: 12,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
-    minWidth: 180,
-    textAlign: "right",
-  },
-  balanceLabel: {
-    display: "block",
-    fontSize: 12,
-    color: "#777",
-  },
-  balanceValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#004aad",
-  },
-  alert: {
-    padding: "0.6rem 0.8rem",
-    borderRadius: 8,
-    marginBottom: "1rem",
-    fontSize: 14,
-  },
-  alertError: {
-    background: "#ffe5e5",
-    color: "#a00",
-  },
-  alertSuccess: {
-    background: "#e5ffe8",
-    color: "#0a7a26",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "2fr 1.3fr",
-    gap: "1.5rem",
-  },
-  leftCol: {
-    minWidth: 0,
-  },
-  rightCol: {
-    minWidth: 0,
-  },
-  sectionTitle: {
-    margin: "0 0 0.8rem",
-    fontSize: "1.1rem",
-  },
-  productsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 16,
-  },
-  productCard: {
-    background: "#fff",
-    borderRadius: 12,
-    padding: "1rem",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    minHeight: 150,
-  },
-  productTitle: {
-    margin: "0 0 0.4rem",
-    fontSize: "1rem",
-  },
-  productDescription: {
-    margin: 0,
-    color: "#666",
-    fontSize: 13,
-  },
-  productFooter: {
-    marginTop: "0.8rem",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "0.8rem",
-  },
-  priceValue: {
-    display: "block",
-    fontWeight: "bold",
-    fontSize: 18,
-  },
-  priceLabel: {
-    display: "block",
-    fontSize: 11,
-    color: "#777",
-  },
-  primaryButton: {
-    background: "#004aad",
-    color: "#fff",
-    border: "none",
-    borderRadius: 999,
-    padding: "0.5rem 1rem",
-    cursor: "pointer",
-    fontWeight: "bold",
-    fontSize: 14,
-    whiteSpace: "nowrap",
-  },
-  primaryButtonDisabled: {
-    opacity: 0.6,
-    cursor: "not-allowed",
-  },
-  cartList: {
-    background: "#fff",
-    borderRadius: 12,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-    padding: "0.8rem",
-    maxHeight: 340,
-    overflowY: "auto",
-  },
-  cartItem: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "0.8rem",
-    padding: "0.5rem 0.3rem",
-    borderBottom: "1px solid #eee",
-    alignItems: "center",
-  },
-  cartItemTitle: {
-    fontSize: 14,
-    fontWeight: 500,
-  },
-  cartItemMeta: {
-    fontSize: 12,
-    color: "#777",
-  },
-  cartItemControls: {
-    display: "flex",
-    alignItems: "center",
-    gap: "0.4rem",
-  },
-  qtyInput: {
-    width: 55,
-    padding: "0.2rem 0.3rem",
-    textAlign: "right",
-    borderRadius: 6,
-    border: "1px solid #ccc",
-    fontSize: 13,
-  },
-  cartItemTotal: {
-    fontSize: 13,
-    minWidth: 80,
-    textAlign: "right",
-  },
-  removeButton: {
-    border: "none",
-    background: "transparent",
-    color: "#a00",
-    cursor: "pointer",
-    fontSize: 16,
-    lineHeight: 1,
-  },
-  cartSummary: {
-    marginTop: "1rem",
-    background: "#fff",
-    borderRadius: 12,
-    padding: "0.9rem 1rem",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "1rem",
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: "#777",
-  },
-  summaryValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  summaryWarning: {
-    marginTop: 4,
-    fontSize: 12,
-    color: "#a00",
-  },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
+  pointsBadge: { color: '#fff', padding: '10px 20px', borderRadius: '12px', textAlign: 'right', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' },
+  lockedBanner: { background: '#fff5f5', color: '#c53030', border: '1px solid #feb2b2', padding: '1rem', borderRadius: '10px', marginBottom: '2rem', textAlign: 'center' },
+  filterBar: { display: 'flex', gap: '10px', marginBottom: '2rem', overflowX: 'auto', paddingBottom: '10px' },
+  filterBtn: { padding: '8px 20px', borderRadius: '25px', border: '1px solid #004aad', cursor: 'pointer', fontWeight: '500', whiteSpace: 'nowrap' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' },
+  card: { background: '#fff', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 6px 15px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' },
+  imageWrapper: { width: '100%', height: '180px', background: '#f0f0f0' }, // Teruggebracht naar de originele hoogte
+  image: { width: '100%', height: '100%', objectFit: 'cover' },
+  cardContent: { padding: '20px', display: 'flex', flexDirection: 'column', flex: 1 },
+  title: { margin: '0 0 8px', fontSize: '1.2rem' },
+  desc: { fontSize: '0.9rem', color: '#666', minHeight: '40px', marginBottom: '15px' },
+  footer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' },
+  price: { fontWeight: 'bold', color: '#004aad', fontSize: '1.1rem' },
+  buyBtn: { color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 'bold' }
 };

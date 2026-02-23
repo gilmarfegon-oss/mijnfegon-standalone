@@ -29,3 +29,9 @@ yarn.lock
 dist/
 build/
 .env
+
+# Firebase
+.firebase/
+
+# Claude Code
+.claude/

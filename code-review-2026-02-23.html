@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Review MijnFegon — 23 februari 2026</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 18mm 20mm 18mm;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.55;
+      color: #222;
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 20mm 18mm;
+      background: #fff;
+    }
+
+    /* ── Cover page ────────────────────────────── */
+    .cover {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 90vh;
+      text-align: center;
+      page-break-after: always;
+    }
+    .cover h1 { font-size: 28pt; color: #004aad; margin-bottom: 8px; }
+    .cover h2 { font-size: 16pt; color: #555; font-weight: 400; margin-bottom: 40px; }
+    .cover .meta { color: #888; font-size: 10pt; line-height: 1.8; }
+    .cover .badge {
+      display: inline-block;
+      background: #004aad;
+      color: #fff;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-size: 14pt;
+      font-weight: 700;
+      margin: 30px 0 10px;
+    }
+    .cover .badge-sub { font-size: 10pt; color: #888; }
+
+    /* ── Headings ──────────────────────────────── */
+    h1 { font-size: 18pt; color: #004aad; margin: 28px 0 10px; border-bottom: 2px solid #004aad; padding-bottom: 4px; }
+    h2 { font-size: 14pt; color: #004aad; margin: 22px 0 8px; }
+    h3 { font-size: 12pt; color: #333; margin: 16px 0 6px; }
+
+    /* ── Paragraphs & lists ────────────────────── */
+    p { margin: 6px 0 10px; }
+    ul, ol { margin: 6px 0 10px 22px; }
+    li { margin-bottom: 4px; }
+
+    /* ── Score badge ───────────────────────────── */
+    .score {
+      display: inline-block;
+      padding: 3px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 10pt;
+      color: #fff;
+      margin-left: 8px;
+    }
+    .score-0 { background: #c0392b; }
+    .score-1 { background: #e74c3c; }
+    .score-2 { background: #e67e22; }
+    .score-3 { background: #f39c12; }
+    .score-4 { background: #27ae60; }
+    .score-5 { background: #1a8a4a; }
+
+    .score-label {
+      font-weight: 600;
+      font-size: 10.5pt;
+      color: #444;
+    }
+
+    /* ── Comparison arrow ─────────────────────── */
+    .trend { font-weight: 700; margin-left: 6px; }
+    .trend-up { color: #27ae60; }
+    .trend-same { color: #888; }
+    .trend-down { color: #c0392b; }
+
+    /* ── Tables ────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 16px;
+      font-size: 10pt;
+    }
+    th {
+      background: #f0f4fa;
+      color: #004aad;
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 2px solid #004aad;
+      font-weight: 600;
+    }
+    td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #e0e0e0;
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    .tbl-highlight td { background: #f8fbff; font-weight: 600; }
+
+    /* ── Risk ratings ─────────────────────────── */
+    .risk-high   { color: #c0392b; font-weight: 700; }
+    .risk-medium { color: #e67e22; font-weight: 700; }
+    .risk-low    { color: #27ae60; font-weight: 700; }
+    .risk-fixed  { color: #27ae60; font-weight: 700; }
+
+    /* ── Info boxes ────────────────────────────── */
+    .box {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 10px 0 14px;
+      font-size: 10pt;
+    }
+    .box-info    { background: #eef4ff; border-left: 4px solid #004aad; }
+    .box-success { background: #e8f8ef; border-left: 4px solid #27ae60; }
+    .box-warning { background: #fef8e7; border-left: 4px solid #f39c12; }
+    .box-danger  { background: #fdecea; border-left: 4px solid #c0392b; }
+
+    /* ── Code ──────────────────────────────────── */
+    code {
+      background: #f4f4f4;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      font-size: 9.5pt;
+    }
+
+    /* ── Page breaks ───────────────────────────── */
+    .page-break { page-break-before: always; }
+
+    /* ── Footer ────────────────────────────────── */
+    .doc-footer {
+      margin-top: 30px;
+      padding-top: 12px;
+      border-top: 1px solid #ddd;
+      font-size: 8.5pt;
+      color: #999;
+      text-align: center;
+    }
+
+    /* ── Maturity scale ────────────────────────── */
+    .scale {
+      display: flex;
+      gap: 2px;
+      margin: 4px 0 8px;
+    }
+    .scale-block {
+      width: 36px;
+      height: 10px;
+      border-radius: 2px;
+      background: #e0e0e0;
+    }
+    .scale-block.active { background: #004aad; }
+
+    @media print {
+      body { padding: 0; }
+      .cover { min-height: 100vh; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- COVER PAGE                                                            -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div style="margin-bottom: 60px;">
+    <img src="logo-fegon.png" alt="Fegon" style="height: 50px; margin-bottom: 10px;" onerror="this.style.display='none'">
+  </div>
+
+  <h1>Code Review</h1>
+  <h2>MijnFegon (mijn-fegon)</h2>
+
+  <p style="color: #888; margin-bottom: 40px;">[Vertrouwelijk]</p>
+
+  <div class="badge">Volwassenheidsscore: 3.05 / 5</div>
+  <p class="badge-sub">Vorige score (Ultraware, 04-02-2026): 1.75 / 5</p>
+
+  <div class="meta" style="margin-top: 60px;">
+    Datum: 23-02-2026<br>
+    Versie: 1.0<br>
+    Methodiek: ISO 25002 (conform Ultraware review)<br>
+    Uitgevoerd met: Claude Code (Opus 4.6)
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TABLE OF CONTENTS                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<h1>1 &nbsp; Inhoudsopgave</h1>
+
+<table style="border: none;">
+  <tr><td style="border: none;">1</td><td style="border: none;">Inhoudsopgave</td></tr>
+  <tr><td style="border: none;">2</td><td style="border: none;">Introductie &amp; Vergelijking</td></tr>
+  <tr><td style="border: none;">3</td><td style="border: none;">Lines of Code</td></tr>
+  <tr><td style="border: none;">4</td><td style="border: none;">Units (Functies &amp; Complexiteit)</td></tr>
+  <tr><td style="border: none;">5</td><td style="border: none;">Code Kwaliteit</td></tr>
+  <tr><td style="border: none;">6</td><td style="border: none;">Security</td></tr>
+  <tr><td style="border: none;">7</td><td style="border: none;">Testbaarheid</td></tr>
+  <tr><td style="border: none;">8</td><td style="border: none;">Documentatie</td></tr>
+  <tr><td style="border: none;">9</td><td style="border: none;">Scoreoverzicht &amp; Conclusie</td></tr>
+  <tr><td style="border: none;">10</td><td style="border: none;">Aanbevelingen</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- 2. INTRODUCTION                                                       -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h1>2 &nbsp; Introductie &amp; Vergelijking</h1>
+
+<p>
+  Dit document is een hertoetsing van de MijnFegon applicatie, uitgevoerd op 23 februari 2026.
+  De toetsing volgt dezelfde methodiek en het ISO 25002 kader als de eerdere review van
+  <strong>Ultraware Consultancy &amp; Development BV</strong> (versie 0.9, 04-02-2026).
+</p>
+
+<p>
+  Het doel is om de voortgang te meten op de tien onderdelen die Ultraware heeft beoordeeld
+  en vast te stellen welke verbeterpunten nog openstaan.
+</p>
+
+<div class="box box-info">
+  <strong>Scoreschaal (conform Ultraware):</strong><br>
+  0 &mdash; Niet aanwezig &nbsp;|&nbsp;
+  1 &mdash; Nauwelijks &nbsp;|&nbsp;
+  2 &mdash; Beperkt &nbsp;|&nbsp;
+  3 &mdash; Aanwezig &nbsp;|&nbsp;
+  4 &mdash; Goed &nbsp;|&nbsp;
+  5 &mdash; Volledig
+</div>
+
+<h2>Belangrijkste structurele wijzigingen sinds de vorige review</h2>
+<ul>
+  <li><strong>Backend toegevoegd:</strong> Firebase Cloud Functions (<code>functions/index.js</code>, 832 regels) verwerken nu alle kritieke operaties server-side: punten, aankopen, role management, Compenda API.</li>
+  <li><strong>Firestore Security Rules:</strong> Uitgebreid regelbestand (145 regels) met role-based access control.</li>
+  <li><strong>ESLint configuratie:</strong> Volledige linter setup met React-, Hooks- en security-regels.</li>
+  <li><strong>PropTypes:</strong> Toegevoegd aan de meeste componenten.</li>
+  <li><strong>Utility extractie:</strong> Herbruikbare helpers (<code>dateUtils.js</code>, <code>statusUtils.js</code>) en custom hooks (<code>usePagination.js</code>, <code>useInstallerProfile.js</code>).</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- 3. LINES OF CODE                                                      -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h1>3 &nbsp; Lines of Code</h1>
+
+<h2>3.1 &nbsp; Volume</h2>
+<p>
+  <span class="score-label">Ultraware:</span> <span class="score score-3">3</span>
+  &nbsp;&rarr;&nbsp;
+  <span class="score-label">Nu:</span> <span class="score score-3">3.5</span>
+  <span class="trend trend-up">+0.5</span>
+</p>
+
+<table>
+  <tr><th>Taal</th><th>Bestanden</th><th>Regels (totaal)</th></tr>
+  <tr><td>CSS</td><td>5</td><td>693</td></tr>
+  <tr><td>JavaScript (src)</td><td>11</td><td>541</td></tr>
+  <tr><td>JSX</td><td>35</td><td>7.269</td></tr>
+  <tr><td>Cloud Functions (backend)</td><td>2</td><td>884</td></tr>
+  <tr class="tbl-highlight"><td><strong>Totaal</strong></td><td><strong>53</strong></td><td><strong>9.387</strong></td></tr>
+</table>
+
+<p>
+  Het totaal aantal regels is gedaald van <strong>~10.520</strong> (vorige review) naar <strong>~9.387</strong>.
+  Belangrijker: er is nu een echte backend (Cloud Functions, 884 regels) die kritieke logica uit de frontend heeft verplaatst.
+  De verhouding frontend/backend is gezonder geworden.
+</p>
+
+<h2>3.2 &nbsp; Duplication</h2>
+<p>
+  <span class="score-label">Ultraware:</span> <span class="score score-4">4</span>
+  &nbsp;&rarr;&nbsp;
+  <span class="score-label">Nu:</span> <span class="score score-4">4</span>
+  <span class="trend trend-same">=</span>
+</p>
+
+<p>
+  Utility-functies (<code>dateUtils.js</code>, <code>statusUtils.js</code>) en herbruikbare hooks
+  (<code>usePagination.js</code>, <code>useInstallerProfile.js</code>) verminderen duplication.
+  Op sommige plekken worden nog steeds gelijksoortige Firestore-bewerkingen apart uitgevoerd.
+  Het duplicatiepercentage blijft onder de 3,5%.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- 4. UNITS                                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h1>4 &nbsp; Units</h1>
+
+<h2>4.1 &nbsp; Unit Size</h2>
+<p>
+  <span class="score-label">Ultraware:</span> <span class="score score-4">4</span>
+  &nbsp;&rarr;&nbsp;
+  <span class="score-label">Nu:</span> <span class="score score-4">4</span>
+  <span class="trend trend-same">=</span>
+</p>
+
+<p>
+  De grootste componenten zijn opgesplitst in sub-componenten.
+  <code>AdminRegistraties.jsx</code> (353 regels) bevat aparte <code>RegistrationRow</code> en <code>RegistrationDetailRow</code> componenten.
+  <code>App.jsx</code> is teruggebracht naar 225 regels met duidelijke route-wrappers.
+</p>
+<p>
+  Aandachtspunt: <code>functions/index.js</code> is 832 regels in &eacute;&eacute;n bestand &mdash; dit kan opgesplitst worden in modules (auth, compenda, shop, email, scheduled).
+</p>
+
+<h2>4.2 &nbsp; Complexity</h2>
+<p>
+  <span class="score-label">Ultraware:</span> <span class="score score-2">2</span>
+  &nbsp;&rarr;&nbsp;
+  <span class="score-label">Nu:</span> <span class="score score-3">3</span>
+  <span class="trend trend-up">+1</span>
+</p>
+
+<p>
+  De grootste functies uit de vorige review zijn opgesplitst.
+  <code>analyzeRegistration()</code> is ge&euml;xtraheerd als aparte helper.
+  De backend functies gebruiken transacties voor atomaire operaties.
+</p>
+
+<table>
+  <tr><th>Bestand</th><th>Regels</th><th>Beoordeling</th></tr>
+  <tr><td>functions/index.js &mdash; processRegistrationLogic</td><td>~110</td><td>Hoog maar goed gestructureerd</td></tr>
+  <tr><td>AdminRegistraties.jsx &mdash; totaal component</td><td>353</td><td>Goed opgesplitst in sub-componenten</td></tr>
+  <tr><td>IEUsers.jsx &mdash; import logica</td><td>168</td><td>Nog veel inline logica</td></tr>
+  <tr><td>App.jsx &mdash; routing</td><td>225</td><td>Verbeterd (was 381 regels)</td></tr>
+</table>
+
+<h2>4.3 &nbsp; Dependencies</h2>
+<p>
+  <span class="score-label">Ultraware:</span> <span class="score score-3">3</span>
+  &nbsp;&rarr;&nbsp;
+  <span class="score-label">Nu:</span> <span class="score score-4">4</span>
+  <span class="trend trend-up">+1</span>
+</p>
+
+<p>De dependencies zijn opgeruimd. Alle geinstalleerde packages worden daadwerkelijk gebruikt:</p>
+<table>
+  <tr><th>Package</th><th>Versie</th><th>Doel</th></tr>
+  <tr><td>react / react-dom</td><td>19.1.1</td><td>UI framework</td></tr>
+  <tr><td>react-router-dom</td><td>7.13.0</td><td>Client-side routing</td></tr>
+  <tr><td>firebase</td><td>12.4.0</td><td>Auth, Firestore, Storage, Functions</td></tr>
+  <tr><td>@emailjs/browser</td><td>4.4.1</td><td>Client-side e-mail</td></tr>
+  <tr><td>papaparse</td><td>5.5.3</td><td>CSV import</td></tr>
+  <tr><td>prop-types</td><td>15.8.1</td><td>Component type-checking</td></tr>
+</table>
+<p>Geen ongebruikte packages meer gevonden. <code>npm audit</code> toont 6 vulnerabilities, maar deze zitten
+  uitsluitend in dev-dependencies (ESLint/minimatch) en komen niet in de productie-build.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- 5. CODE QUALITY                                                       -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h1>5 &nbsp; Code Kwaliteit</h1>
+
+<h2>5.1 &nbsp; Code Style</h2>
+<p>
+  <span class="score-label">Ultraware:</span> <span class="score score-2">2</span>
+  &nbsp;&rarr;&nbsp;
+  <span class="score-label">Nu:</span> <span class="score score-3">3</span>
+  <span class="trend trend-up">+1</span>
+</p>
+
+<p>De code is consistenter geworden:</p>
+<ul>
+  <li><strong>PropTypes</strong> zijn toegevoegd aan de meeste componenten (was 42x ontbrekend)</li>
+  <li><strong>Utility functies</strong> ge&euml;xtraheerd naar <code>src/utils/</code></li>
+  <li><strong>Custom hooks</strong> scheiden business-logica van presentatie</li>
+  <li>Consistent gebruik van <code>async/await</code> met <code>try/catch</code></li>
+</ul>
+
+<p><strong>Resterende aandachtspunten:</strong></p>
+<ul>
+  <li>Inline <code>styles</code>-objecten worden nog veel gebruikt naast CSS-bestanden (inconsistente styling-aanpak)</li>
+  <li>Sommige componenten mengen nog logica en presentatie (bijv. <code>IEUsers.jsx</code>)</li>
+</ul>
+
+<h2>5.2 &nbsp; Linting</h2>
+<p>
+  <span class="score-label">Ultraware:</span> <span class="score score-0">0</span>
+  &nbsp;&rarr;&nbsp;
+  <span class="score-label">Nu:</span> <span class="score score-4">4</span>
+  <span class="trend trend-up">+4</span>
+</p>
+
+<div class="box box-success">
+  <strong>Grootste verbetering.</strong> ESLint is volledig geconfigureerd en de code passt schoon door alle regels (exit code 0, geen warnings).
+</div>
+
+<p>De ESLint configuratie (<code>eslint.config.js</code>) bevat:</p>
+<table>
+  <tr><th>Regel</th><th>Instelling</th><th>Doel</th></tr>
+  <tr><td><code>react/prop-types</code></td><td>warn</td><td>Ontbrekende prop validatie opsporen</td></tr>
+  <tr><td><code>no-console</code></td><td>warn (allow: warn, error)</td><td>Voorkomt <code>console.log</code> in productie</td></tr>
+  <tr><td><code>no-eval</code></td><td>error</td><td>Blokkeert eval() &mdash; security</td></tr>
+  <tr><td><code>no-implied-eval</code></td><td>error</td><td>Blokkeert indirecte eval &mdash; security</td></tr>
+  <tr><td><code>no-unused-vars</code></td><td>warn</td><td>Ongebruikte variabelen opsporen</td></tr>
+  <tr><td><code>react-hooks/*</code></td><td>recommended</td><td>Correcte hook-afhankelijkheden</td></tr>
+</table>
+
+<p>De 42x "missing prop validation", 3x "ongebruikte variabelen" en 2x "performance problemen" uit de vorige review zijn opgelost.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- 6. SECURITY                                                           -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h1>6 &nbsp; Security</h1>
+<p>
+  <span class="score-label">Ultraware:</span> <span class="score score-1">1</span>
+  &nbsp;&rarr;&nbsp;
+  <span class="score-label">Nu:</span> <span class="score score-3">3</span>
+  <span class="trend trend-up">+2</span>
+</p>
+
+<div class="box box-success">
+  <strong>Grote verbetering.</strong> De kritieke beveiligingsproblemen uit de vorige review (admin privilege escalation,
+  saldo manipulatie, onbeveiligde Compenda API, ontbrekende Firestore rules) zijn opgelost door het toevoegen van
+  een server-side backend en uitgebreide Firestore security rules.
+</div>
+
+<h2>6.1 &nbsp; Status van bevindingen uit de vorige review</h2>
+
+<table>
+  <tr><th>#</th><th>Risico</th><th>Was</th><th>Nu</th><th>Toelichting</th></tr>
+  <tr>
+    <td>1</td>
+    <td>Ontbrekende Admin Autorisatie</td>
+    <td><span class="risk-high">Hoog</span></td>
+    <td><span class="risk-fixed">Opgelost</span></td>
+    <td>Admin check via Custom Claims (<code>auth.token.admin</code>) + backend <code>checkIsAdmin()</code>.
+        Role changes via server-side <code>setUserRole</code> Cloud Function met anti-self-demotion en last-admin bescherming.</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>Saldo bewerken</td>
+    <td><span class="risk-medium">Middel</span></td>
+    <td><span class="risk-fixed">Opgelost</span></td>
+    <td>Firestore rules blokkeren <code>saldo</code>, <code>points_total</code>, <code>role</code> van client writes.
+        Aankopen via server-side <code>purchaseProduct</code> transactie. Punten via <code>adjustUserPoints</code> transactie.</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>Hardcoded API Sleutels</td>
+    <td><span class="risk-low">Laag</span></td>
+    <td><span class="risk-low">Laag</span></td>
+    <td>Firebase config is standaard client-side (by design). Compenda token en KVK key zijn nu server-side secrets via <code>defineSecret()</code>.</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>Firestore Functions onbeveiligd</td>
+    <td><span class="risk-high">Hoog</span></td>
+    <td><span class="risk-fixed">Opgelost</span></td>
+    <td>Alle <code>onCall</code> functies checken <code>checkIsAdmin()</code>. HTTP endpoints verifi&euml;ren Bearer tokens. CORS beperkt tot specifieke origins.</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td>Compenda API onbeveiligd</td>
+    <td><span class="risk-high">Hoog</span></td>
+    <td><span class="risk-fixed">Opgelost</span></td>
+    <td>Compenda API calls gaan nu uitsluitend via Cloud Functions met <code>COMPENDA_TOKEN</code> als secret. Niet meer bereikbaar vanuit de browser.</td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td>Ontbrekende Firestore regels</td>
+    <td><span class="risk-high">Hoog</span></td>
+    <td><span class="risk-fixed">Opgelost</span></td>
+    <td>Uitgebreid <code>firestore.rules</code> (145 regels): role-based access, geblokkeerde velden, deny-all default, immutable admin logs.</td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td>Geen invoervalidatie</td>
+    <td><span class="risk-medium">Middel</span></td>
+    <td><span class="risk-low">Verbeterd</span></td>
+    <td>Server-side validatie in Cloud Functions. Firestore rules blokkeren gevaarlijke velden. Client-side form validatie nog beperkt.</td>
+  </tr>
+  <tr>
+    <td>8</td>
+    <td>Logging gevoelige data</td>
+    <td><span class="risk-low">Laag</span></td>
+    <td><span class="risk-low">Verbeterd</span></td>
+    <td><code>console.log</code> geblokkeerd door linter. Alleen <code>console.warn</code>/<code>error</code>. In de backend wordt nog payload gelogd.</td>
+  </tr>
+  <tr>
+    <td>9</td>
+    <td>Ontbreken foutherstel</td>
+    <td><span class="risk-medium">Middel</span></td>
+    <td><span class="risk-fixed">Opgelost</span></td>
+    <td>Error handlers op alle Firestore snapshots, <code>try/catch</code> rondom alle async operaties, transacties voor atomaire bewerkingen.</td>
+  </tr>
+</table>
+
+<h2>6.2 &nbsp; Nieuwe beveiligingsmaatregelen</h2>
+<ul>
+  <li><strong>GDPR account deletion</strong> (<code>deleteUserAccount</code>) met data-anonimisering van registraties</li>
+  <li><strong>Transaction-based purchases</strong> &mdash; geen race conditions bij aankopen</li>
+  <li><strong>Welkomstpunten</strong> met server-controlled <code>welcome_points_awarded</code> flag (niet resettable)</li>
+  <li><strong>Verjaardagspunten</strong> met <code>birthday_points_year</code> guard (voorkomt dubbele toekenning)</li>
+  <li><strong>Wachtwoord reset</strong> via server-side link generation (verhult of e-mail bestaat)</li>
+  <li><strong>Immutable audit logs</strong> (<code>logs_admin</code> &mdash; update/delete: false)</li>
+  <li><strong>Last-admin bescherming</strong> &mdash; voorkomt verwijdering van de laatste admin</li>
+</ul>
+
+<h2>6.3 &nbsp; Resterende aandachtspunten</h2>
+
+<table>
+  <tr><th>#</th><th>Punt</th><th>Risico</th><th>Locatie</th></tr>
+  <tr>
+    <td>A</td>
+    <td>Backend logt volledige payloads met klantgegevens (PII)</td>
+    <td><span class="risk-medium">Middel</span></td>
+    <td><code>functions/index.js</code> regels 290&ndash;291</td>
+  </tr>
+  <tr>
+    <td>B</td>
+    <td>Hardcoded Cloud Function URL voor KVK lookup</td>
+    <td><span class="risk-low">Laag</span></td>
+    <td><code>ProfielAanvullen.jsx</code>, <code>Instellingen.jsx</code></td>
+  </tr>
+  <tr>
+    <td>C</td>
+    <td>Admin e-mail hardcoded in client-code</td>
+    <td><span class="risk-low">Laag</span></td>
+    <td><code>mailService.js</code> regel 45</td>
+  </tr>
+  <tr>
+    <td>D</td>
+    <td>Geen rate limiting op Cloud Functions</td>
+    <td><span class="risk-low">Laag</span></td>
+    <td>Alle <code>onCall</code> endpoints</td>
+  </tr>
+  <tr>
+    <td>E</td>
+    <td>Client-side formulier-validatie nog beperkt</td>
+    <td><span class="risk-low">Laag</span></td>
+    <td>Diverse formulieren</td>
+  </tr>
+</table>
+
+<h2>6.4 &nbsp; Package vulnerabilities</h2>
+<p><code>npm audit</code> toont 6 vulnerabilities (5 high, 1 moderate). Deze zitten <strong>uitsluitend</strong> in
+  dev-dependencies (ESLint en minimatch) en komen niet in de productie-build terecht.
+  De react-router-dom CVE's uit de vorige review zijn opgelost door de upgrade naar versie 7.13.0.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- 7. TESTABILITY                                                        -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h1>7 &nbsp; Testbaarheid</h1>
+<p>
+  <span class="score-label">Ultraware:</span> <span class="score score-0">0</span>
+  &nbsp;&rarr;&nbsp;
+  <span class="score-label">Nu:</span> <span class="score score-0">0</span>
+  <span class="trend trend-same">=</span>
+</p>
+
+<div class="box box-danger">
+  <strong>Ongewijzigd.</strong> Er zijn nog steeds geen automatische tests aanwezig (unit, integratie, of E2E).
+  Dit blijft het grootste verbeterpunt van de applicatie.
+</div>
+
+<p>
+  Door het missen van tests is het niet gecontroleerd te verifi&euml;ren of de applicatie
+  naar behoren werkt na wijzigingen. De opgesplitste functies en Cloud Functions lenen zich
+  goed voor unit tests &mdash; dit is een logische volgende stap.
+</p>
+
+<p><strong>Aanbevolen teststrategie:</strong></p>
+<ul>
+  <li><strong>Unit tests</strong> voor Cloud Functions (checkIsAdmin, purchaseProduct, adjustUserPoints) &mdash; hoogste prioriteit</li>
+  <li><strong>Component tests</strong> voor formuliervalidatie (Register, RegistratieFormulier)</li>
+  <li><strong>Integration tests</strong> met Firebase Emulator Suite</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- 8. DOCUMENTATION                                                      -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<h1>8 &nbsp; Documentatie</h1>
+<p>
+  <span class="score-label">Ultraware:</span> <span class="score score-1">1</span>
+  &nbsp;&rarr;&nbsp;
+  <span class="score-label">Nu:</span> <span class="score score-2">2</span>
+  <span class="trend trend-up">+1</span>
+</p>
+
+<p>Lichte verbetering. De code zelf is beter gedocumenteerd:</p>
+<ul>
+  <li>Duidelijke sectie-headers en commentaar in <code>firestore.rules</code></li>
+  <li>Gestructureerde comments in <code>functions/index.js</code> (genummerde secties)</li>
+  <li>Template ID documentatie in <code>mailService.js</code></li>
+</ul>
+
+<p>Er is nog geen apart Functioneel Ontwerp, Technisch Ontwerp of Business Rules document beschikbaar.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- 9. SCORE OVERVIEW                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h1>9 &nbsp; Scoreoverzicht &amp; Conclusie</h1>
+
+<table>
+  <tr>
+    <th>Onderdeel</th>
+    <th style="text-align:center;">Ultraware<br>(04-02-2026)</th>
+    <th style="text-align:center;">Huidige score<br>(23-02-2026)</th>
+    <th style="text-align:center;">Verschil</th>
+  </tr>
+  <tr>
+    <td>3.1 Volume</td>
+    <td style="text-align:center;">3</td>
+    <td style="text-align:center;">3.5</td>
+    <td style="text-align:center;"><span class="trend trend-up">+0.5</span></td>
+  </tr>
+  <tr>
+    <td>3.2 Duplication</td>
+    <td style="text-align:center;">4</td>
+    <td style="text-align:center;">4</td>
+    <td style="text-align:center;"><span class="trend trend-same">=</span></td>
+  </tr>
+  <tr>
+    <td>4.1 Unit Size</td>
+    <td style="text-align:center;">4</td>
+    <td style="text-align:center;">4</td>
+    <td style="text-align:center;"><span class="trend trend-same">=</span></td>
+  </tr>
+  <tr>
+    <td>4.2 Complexity</td>
+    <td style="text-align:center;">2</td>
+    <td style="text-align:center;">3</td>
+    <td style="text-align:center;"><span class="trend trend-up">+1</span></td>
+  </tr>
+  <tr>
+    <td>4.3 Dependencies</td>
+    <td style="text-align:center;">3</td>
+    <td style="text-align:center;">4</td>
+    <td style="text-align:center;"><span class="trend trend-up">+1</span></td>
+  </tr>
+  <tr>
+    <td>5.1 Code Style</td>
+    <td style="text-align:center;">2</td>
+    <td style="text-align:center;">3</td>
+    <td style="text-align:center;"><span class="trend trend-up">+1</span></td>
+  </tr>
+  <tr>
+    <td>5.2 Linting</td>
+    <td style="text-align:center;">0</td>
+    <td style="text-align:center;">4</td>
+    <td style="text-align:center;"><span class="trend trend-up">+4</span></td>
+  </tr>
+  <tr>
+    <td>6. Security</td>
+    <td style="text-align:center;">1</td>
+    <td style="text-align:center;">3</td>
+    <td style="text-align:center;"><span class="trend trend-up">+2</span></td>
+  </tr>
+  <tr>
+    <td>7. Testbaarheid</td>
+    <td style="text-align:center;">0</td>
+    <td style="text-align:center;">0</td>
+    <td style="text-align:center;"><span class="trend trend-same">=</span></td>
+  </tr>
+  <tr>
+    <td>8. Documentatie</td>
+    <td style="text-align:center;">1</td>
+    <td style="text-align:center;">2</td>
+    <td style="text-align:center;"><span class="trend trend-up">+1</span></td>
+  </tr>
+  <tr class="tbl-highlight">
+    <td><strong>Gemiddelde score</strong></td>
+    <td style="text-align:center;"><strong>1.75</strong></td>
+    <td style="text-align:center;"><strong>3.05</strong></td>
+    <td style="text-align:center;"><span class="trend trend-up"><strong>+1.30</strong></span></td>
+  </tr>
+</table>
+
+<div class="box box-success" style="margin-top: 20px;">
+  <strong>Conclusie:</strong> De applicatie is gestegen van <strong>1.75 (onvoldoende)</strong> naar
+  <strong>3.05 (voldoende)</strong>. De grootste verbeteringen zitten in <strong>linting</strong> (+4)
+  en <strong>security</strong> (+2). De toevoeging van een server-side backend met Cloud Functions
+  is de belangrijkste structurele verandering &mdash; kritieke operaties worden nu server-side
+  afgehandeld met Firestore transacties en role-based access control.
+</div>
+
+<p>
+  Het volwassenheidsniveau wordt nog gedrukt door het volledig ontbreken van automatische tests (score 0).
+  Het toevoegen van tests zou de score naar <strong>~3.5</strong> kunnen brengen.
+</p>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- 10. RECOMMENDATIONS                                                   -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h1>10 &nbsp; Aanbevelingen</h1>
+
+<h2>Prioriteit 1 &mdash; Hoog (direct oppakken)</h2>
+<table>
+  <tr><th>#</th><th>Aanbeveling</th><th>Impact op score</th></tr>
+  <tr>
+    <td>1</td>
+    <td><strong>Automatische tests toevoegen:</strong> Begin met unit tests voor Cloud Functions
+        (checkIsAdmin, purchaseProduct, adjustUserPoints). Gebruik Vitest + Firebase Emulator Suite.</td>
+    <td>Testbaarheid: 0 &rarr; 2-3</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td><strong>Payload logging verwijderen:</strong> Verwijder <code>console.log</code> van klantgegevens-payloads
+        in <code>functions/index.js</code> (regels 290-291, 305).</td>
+    <td>Security: +0.5</td>
+  </tr>
+</table>
+
+<h2>Prioriteit 2 &mdash; Middel (binnen 1-2 sprints)</h2>
+<table>
+  <tr><th>#</th><th>Aanbeveling</th><th>Impact op score</th></tr>
+  <tr>
+    <td>3</td>
+    <td><strong>Backend opsplitsen:</strong> Splits <code>functions/index.js</code> op in modules
+        (auth, compenda, shop, email, scheduled). Verhoogt onderhoudbaarheid.</td>
+    <td>Complexity: +0.5, Unit Size: +0.5</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td><strong>Client-side formulier validatie:</strong> Voeg input sanitizing en validatie toe aan formulieren
+        (Register, ProfielAanvullen, RegistratieFormulier).</td>
+    <td>Security: +0.5</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td><strong>KVK lookup via httpsCallable:</strong> Vervang hardcoded Cloud Function URLs door
+        <code>httpsCallable()</code> aanroepen.</td>
+    <td>Security: +0.25</td>
+  </tr>
+</table>
+
+<h2>Prioriteit 3 &mdash; Laag (doorlopend)</h2>
+<table>
+  <tr><th>#</th><th>Aanbeveling</th><th>Impact op score</th></tr>
+  <tr>
+    <td>6</td>
+    <td><strong>Styling consolideren:</strong> Kies &eacute;&eacute;n aanpak: CSS-bestanden &oacute;f inline styles.
+        Verwijder de dubbele aanpak.</td>
+    <td>Code Style: +0.5</td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td><strong>Business Rules documenteren:</strong> Leg de puntenlogica, Compenda-integratie en
+        gebruikersrollen vast in een apart document.</td>
+    <td>Documentatie: +1-2</td>
+  </tr>
+  <tr>
+    <td>8</td>
+    <td><strong>Admin e-mail configureerbaar maken:</strong> Verplaats naar Firestore settings
+        i.p.v. hardcoded in <code>mailService.js</code>.</td>
+    <td>Security: +0.25</td>
+  </tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- FOOTER                                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="doc-footer">
+  Code Review MijnFegon &mdash; Versie 1.0, 23-02-2026 &mdash; Uitgevoerd met Claude Code (Opus 4.6)
+</div>
+
+</body>
+</html>

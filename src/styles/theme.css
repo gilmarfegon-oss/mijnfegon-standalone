@@ -1,76 +1,22 @@
-:root{
-  --primary:#0066ff;
-  --primary-dark:#002b5c;
-  --primary-light:#338dff;
-  --bg:#f5f7fa;
-  --text:#1a1a1a;
-  --card:#ffffff;
-  --radius:12px;
-  --shadow:0 2px 12px rgba(0,0,0,.06);
-  --transition:.2s ease;
+:root {
+  --primary: #0066ff;
+  --primary-dark: #002b5c;
+  --primary-light: #338dff;
+  --bg: #f5f7fa;
+  --text: #1a1a1a;
+  --card: #ffffff;
+  --radius: 12px;
+  --shadow: 0 2px 12px rgba(0,0,0,.06);
+  --transition: .2s ease;
 }
 
-*{box-sizing:border-box}
-html,body,#root{height:100%}
-body{
-  margin:0;
-  font-family:Poppins,Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-  color:var(--text);
-  background:var(--bg);
+/* Buttons (Inclusief btn-danger die we gebruiken voor Logout) */
+button, .btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: .75rem 1.2rem; border-radius: var(--radius);
+  font-weight: 600; cursor: pointer; border: none; transition: var(--transition);
 }
 
-/* Layout helpers */
-.container{max-width:1120px;margin:0 auto;padding:2rem}
-.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.5rem}
-.section{margin-bottom:1.5rem}
-.grid{display:grid;gap:1rem}
-.grid-3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-
-/* Buttons */
-button,.btn{
-  display:inline-flex;align-items:center;justify-content:center;
-  padding:.75rem 1.2rem;border:0;border-radius:10px;cursor:pointer;
-  font-weight:600;transition:transform var(--transition),background var(--transition),border var(--transition),color var(--transition);
-  text-decoration:none
-}
-.btn-primary,button.primary{background:var(--primary);color:#fff}
-.btn-primary:hover,button.primary:hover{background:var(--primary-light);transform:translateY(-1px)}
-.btn-secondary{background:#fff;border:2px solid var(--primary);color:var(--primary)}
-.btn-danger{background:#ff4d4f;color:#fff}
-.btn-warning{background:#ff9800;color:#fff}
-.btn-success{background:#4caf50;color:#fff}
-
-/* Inputs */
-input,select,textarea{
-  width:100%;padding:.7rem;border:1px solid #d6d9e0;border-radius:10px;background:#fff;
-  transition:border var(--transition),box-shadow var(--transition)
-}
-input:focus,select:focus,textarea:focus{
-  outline:0;border-color:var(--primary);
-  box-shadow:0 0 0 3px rgba(0,102,255,.15)
-}
-
-/* Table */
-table{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden}
-thead{background:var(--primary);color:#fff}
-th,td{padding:.75rem 1rem;text-align:left}
-tbody tr:nth-child(even){background:#f2f6ff}
-tbody tr:hover{background:#e9f1ff}
-
-/* Nav */
-nav.app-nav{
-  display:flex;gap:.8rem;align-items:center;margin-bottom:1.2rem;
-  background:#fff;border-radius:12px;box-shadow:var(--shadow);padding:.6rem .8rem
-}
-nav.app-nav a{color:var(--primary-dark);text-decoration:none;font-weight:600}
-nav.app-nav a:hover{color:var(--primary)}
-
-/* Status pills */
-.pill{padding:.25rem .6rem;border-radius:999px;font-weight:600;font-size:.85rem;display:inline-block}
-.pill-pending{background:#fff3cd;color:#8a6d3b}
-.pill-approved{background:#e6f6ea;color:#2e7d32}
-.pill-rejected{background:#fdecea;color:#b71c1c}
-
-/* Utility */
-.text-muted{color:#6b7280}
-.center{text-align:center}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-danger { background: #ff4d4f; color: #fff; }
+.btn-secondary { background: #fff; border: 2px solid var(--primary); color: var(--primary); }

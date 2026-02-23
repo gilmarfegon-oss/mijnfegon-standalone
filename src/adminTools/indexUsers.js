@@ -16,7 +16,6 @@ export async function indexAllUsers() {
     if (data.installer_full_name)
       keywords.push(data.installer_full_name.toLowerCase());
 
-    console.log("Indexing:", data.email);
 
     await updateDoc(doc(db, "users", userDoc.id), {
       keywords: keywords,

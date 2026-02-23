@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MijnFegon - Volledige Documentatie</title>
+  <style>
+    :root {
+      --primary: #0066ff;
+      --primary-dark: #002b5c;
+      --bg: #f5f7fa;
+      --text: #1a1a1a;
+      --text-light: #555;
+      --card: #ffffff;
+      --border: #e0e4e8;
+      --success: #16a34a;
+      --error: #ff4d4f;
+      --warning: #f59e0b;
+      --code-bg: #f0f2f5;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      line-height: 1.7;
+      background: var(--bg);
+      font-size: 15px;
+    }
+
+    /* ── Cover page ── */
+    .cover {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 60px 40px;
+      page-break-after: always;
+    }
+    .cover h1 {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -1px;
+    }
+    .cover .subtitle {
+      font-size: 22px;
+      font-weight: 300;
+      opacity: 0.9;
+      margin-bottom: 48px;
+    }
+    .cover .meta {
+      font-size: 15px;
+      opacity: 0.75;
+      line-height: 2;
+    }
+    .cover .meta strong { opacity: 1; }
+    .cover .logo-text {
+      font-size: 14px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      opacity: 0.5;
+      margin-top: 60px;
+    }
+
+    /* ── Main content ── */
+    .content {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 48px;
+      background: var(--card);
+    }
+
+    /* ── TOC ── */
+    .toc {
+      page-break-after: always;
+      padding-bottom: 40px;
+    }
+    .toc h2 {
+      font-size: 28px;
+      color: var(--primary-dark);
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid var(--primary);
+    }
+    .toc ol {
+      list-style: none;
+      counter-reset: toc;
+      padding: 0;
+    }
+    .toc > ol > li {
+      counter-increment: toc;
+      margin-bottom: 4px;
+    }
+    .toc > ol > li > a {
+      display: flex;
+      align-items: baseline;
+      padding: 6px 0;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    .toc > ol > li > a:hover { color: var(--primary); }
+    .toc > ol > li > a::before {
+      content: counter(toc) ".";
+      min-width: 32px;
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .toc .sub {
+      list-style: none;
+      padding-left: 32px;
+      margin-top: 2px;
+      margin-bottom: 8px;
+    }
+    .toc .sub li a {
+      display: block;
+      padding: 3px 0;
+      text-decoration: none;
+      color: var(--text-light);
+      font-size: 14px;
+    }
+    .toc .sub li a:hover { color: var(--primary); }
+
+    /* ── Headings ── */
+    h2 {
+      font-size: 26px;
+      color: var(--primary-dark);
+      margin-top: 56px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid var(--primary);
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 20px;
+      color: var(--primary-dark);
+      margin-top: 36px;
+      margin-bottom: 14px;
+      page-break-after: avoid;
+    }
+    h4 {
+      font-size: 16px;
+      color: var(--text);
+      margin-top: 24px;
+      margin-bottom: 10px;
+      font-weight: 600;
+      page-break-after: avoid;
+    }
+
+    /* ── Paragraphs, lists ── */
+    p { margin-bottom: 12px; }
+    ul, ol { margin-bottom: 12px; padding-left: 24px; }
+    li { margin-bottom: 4px; }
+    strong { font-weight: 600; }
+
+    /* ── Info blocks ── */
+    .info-block {
+      background: #eef4ff;
+      border-left: 4px solid var(--primary);
+      padding: 14px 18px;
+      margin: 16px 0;
+      border-radius: 0 6px 6px 0;
+      font-size: 14px;
+    }
+    .info-block p { margin-bottom: 4px; }
+    .info-block strong { color: var(--primary-dark); }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 20px;
+      font-size: 14px;
+      page-break-inside: avoid;
+    }
+    thead th {
+      background: var(--primary-dark);
+      color: #fff;
+      text-align: left;
+      padding: 10px 14px;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    thead th:first-child { border-radius: 6px 0 0 0; }
+    thead th:last-child { border-radius: 0 6px 0 0; }
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tbody tr:nth-child(even) { background: #f8f9fb; }
+    tbody tr:hover { background: #eef4ff; }
+
+    /* ── Code blocks ── */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 14px 0 18px;
+      page-break-inside: avoid;
+    }
+    code {
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+    }
+    p code, li code, td code {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+      color: #c7254e;
+    }
+
+    /* ── Status badges ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-yellow { background: #fef9c3; color: #854d0e; }
+    .badge-grey { background: #f1f5f9; color: #475569; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+
+    /* ── Flow diagrams ── */
+    .flow {
+      background: linear-gradient(135deg, #f0f4ff 0%, #f8f9ff 100%);
+      border: 1px solid #d0d8f0;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 16px 0;
+      font-size: 14px;
+      page-break-inside: avoid;
+    }
+    .flow .arrow { color: var(--primary); font-weight: 700; }
+
+    /* ── Section divider ── */
+    hr {
+      border: none;
+      height: 1px;
+      background: var(--border);
+      margin: 40px 0;
+    }
+
+    /* ── Page meta labels ── */
+    .page-ref {
+      color: var(--text-light);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .page-ref code {
+      color: var(--primary);
+      background: #eef4ff;
+    }
+
+    /* ── Footer ── */
+    .doc-footer {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 2px solid var(--border);
+      color: var(--text-light);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    /* ── Print styles ── */
+    @media print {
+      body { background: #fff; font-size: 12px; }
+      .content { padding: 0; max-width: 100%; }
+      .cover { min-height: 100vh; }
+      h2 { margin-top: 32px; font-size: 22px; }
+      h3 { margin-top: 24px; font-size: 17px; }
+      table { font-size: 11px; }
+      pre { font-size: 11px; padding: 10px 14px; }
+      tbody tr:hover { background: inherit; }
+      a { color: var(--text) !important; text-decoration: none !important; }
+      .toc > ol > li > a { border-bottom-color: #ccc; }
+
+      @page {
+        size: A4;
+        margin: 20mm 18mm 24mm 18mm;
+      }
+      @page :first { margin: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- COVER PAGE                                                      -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <h1>MijnFegon</h1>
+  <div class="subtitle">Volledige Technische Documentatie</div>
+  <div class="meta">
+    <strong>Versie:</strong> 1.0<br>
+    <strong>Datum:</strong> 23 februari 2026<br>
+    <strong>Applicatie:</strong> MijnFegon Installateurportaal<br>
+    <strong>URL:</strong> https://mijnfegon.web.app
+  </div>
+  <div class="logo-text">Fegon Nederland</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- TABLE OF CONTENTS                                               -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="content">
+
+<div class="toc">
+  <h2>Inhoudsopgave</h2>
+  <ol>
+    <li><a href="#s1">Overzicht</a></li>
+    <li><a href="#s2">Technische Stack</a></li>
+    <li><a href="#s3">Projectstructuur</a></li>
+    <li><a href="#s4">Applicatiearchitectuur</a></li>
+    <li><a href="#s5">Authenticatie &amp; Autorisatie</a></li>
+    <li><a href="#s6">Routering</a></li>
+    <li><a href="#s7">Gebruikersfuncties</a>
+      <ul class="sub">
+        <li><a href="#s71">7.1 Registreren</a></li>
+        <li><a href="#s72">7.2 Inloggen</a></li>
+        <li><a href="#s73">7.3 Profiel Aanvullen</a></li>
+        <li><a href="#s74">7.4 Dashboard</a></li>
+        <li><a href="#s75">7.5 Product Registratie</a></li>
+        <li><a href="#s76">7.6 Mijn Registraties</a></li>
+        <li><a href="#s77">7.7 Shop</a></li>
+        <li><a href="#s78">7.8 Mijn Bestellingen</a></li>
+        <li><a href="#s79">7.9 Instellingen</a></li>
+      </ul>
+    </li>
+    <li><a href="#s8">Beheerdersfuncties (Admin)</a>
+      <ul class="sub">
+        <li><a href="#s81">8.1 Admin Dashboard</a></li>
+        <li><a href="#s82">8.2 Gebruikersbeheer</a></li>
+        <li><a href="#s83">8.3 Installateurs (Compenda Sync)</a></li>
+        <li><a href="#s84">8.4 Registratiebeheer</a></li>
+        <li><a href="#s85">8.5 Productenbeheer</a></li>
+        <li><a href="#s86">8.6 Bestellingenbeheer</a></li>
+        <li><a href="#s87">8.7 Puntenbeheer</a></li>
+        <li><a href="#s88">8.8 Registraties Koppelen</a></li>
+        <li><a href="#s89">8.9 Import/Export</a></li>
+        <li><a href="#s810">8.10 Logboek</a></li>
+        <li><a href="#s811">8.11 Admin Instellingen</a></li>
+      </ul>
+    </li>
+    <li><a href="#s9">Puntensysteem (Drops)</a></li>
+    <li><a href="#s10">Firebase Structuur</a>
+      <ul class="sub">
+        <li><a href="#s101">10.1 Firestore Collecties</a></li>
+        <li><a href="#s102">10.2 Beveiligingsregels</a></li>
+      </ul>
+    </li>
+    <li><a href="#s11">Cloud Functions</a></li>
+    <li><a href="#s12">Externe Koppelingen</a>
+      <ul class="sub">
+        <li><a href="#s121">12.1 Compenda API</a></li>
+        <li><a href="#s122">12.2 KVK API</a></li>
+        <li><a href="#s123">12.3 PDOK Adresservice</a></li>
+        <li><a href="#s124">12.4 EmailJS</a></li>
+      </ul>
+    </li>
+    <li><a href="#s13">E-mailsysteem</a></li>
+    <li><a href="#s14">Styling &amp; Thema</a></li>
+    <li><a href="#s15">Privacy &amp; AVG/GDPR</a></li>
+    <li><a href="#s16">Deployment &amp; Hosting</a></li>
+    <li><a href="#s17">Ontwikkelomgeving</a></li>
+  </ol>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 1. OVERZICHT                                                    -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s1">1. Overzicht</h2>
+
+<p><strong>MijnFegon</strong> is een B2B-webapplicatie (installateurportaal) ontwikkeld voor Fegon Nederland. De applicatie stelt installateurs in staat om:</p>
+<ul>
+  <li>Productregistraties in te dienen voor waterbehandelingsproducten</li>
+  <li>Punten (genaamd <strong>Drops</strong>) te verdienen voor goedgekeurde registraties</li>
+  <li>Drops in te wisselen voor producten in de webshop</li>
+  <li>Hun profiel en bedrijfsgegevens te beheren</li>
+</ul>
+
+<p>Voor beheerders biedt de applicatie een compleet adminpaneel met:</p>
+<ul>
+  <li>Gebruikers-, registratie- en productbeheer</li>
+  <li>Goedkeuring van registraties met automatische Compenda-synchronisatie</li>
+  <li>Puntenbeheer en -toekenning</li>
+  <li>Import/export van gegevens (CSV)</li>
+  <li>Uitgebreid logboek van alle beheeracties</li>
+</ul>
+
+<p>De applicatie is volledig Nederlandstalig en voldoet aan AVG/GDPR-wetgeving.</p>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 2. TECHNISCHE STACK                                             -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s2">2. Technische Stack</h2>
+
+<table>
+  <thead><tr><th>Component</th><th>Technologie</th><th>Versie</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Frontend framework</strong></td><td>React</td><td>19.1.1</td></tr>
+    <tr><td><strong>Build tool</strong></td><td>Vite</td><td>7.1.7</td></tr>
+    <tr><td><strong>Routering</strong></td><td>React Router</td><td>7.13.0</td></tr>
+    <tr><td><strong>Backend/Database</strong></td><td>Firebase (Firestore)</td><td>12.4.0</td></tr>
+    <tr><td><strong>Authenticatie</strong></td><td>Firebase Authentication</td><td>&mdash;</td></tr>
+    <tr><td><strong>Serverless functies</strong></td><td>Firebase Cloud Functions</td><td>&mdash;</td></tr>
+    <tr><td><strong>Bestandsopslag</strong></td><td>Firebase Storage</td><td>&mdash;</td></tr>
+    <tr><td><strong>E-mail</strong></td><td>EmailJS</td><td>4.4.1</td></tr>
+    <tr><td><strong>CSV verwerking</strong></td><td>PapaParse</td><td>5.5.3</td></tr>
+    <tr><td><strong>Hosting</strong></td><td>Firebase Hosting</td><td>&mdash;</td></tr>
+    <tr><td><strong>Taal</strong></td><td>JavaScript / JSX</td><td>ES2020+</td></tr>
+  </tbody>
+</table>
+
+<h3>Belangrijke afhankelijkheden</h3>
+<pre><code>react, react-dom        - UI-framework
+react-router-dom        - Client-side navigatie
+firebase                - Volledige Firebase SDK
+papaparse               - CSV import/export parsing
+@emailjs/browser        - Client-side e-mailverzending
+prop-types              - Runtime type-validatie</code></pre>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 3. PROJECTSTRUCTUUR                                             -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s3">3. Projectstructuur</h2>
+
+<pre><code>mijnfegon-standalone/
+&#9500;&#9472;&#9472; src/                          # Broncode
+&#9474;   &#9500;&#9472;&#9472; main.jsx                  # Startpunt van de applicatie
+&#9474;   &#9500;&#9472;&#9472; App.jsx                   # Hoofdcomponent met routering
+&#9474;   &#9500;&#9472;&#9472; App.css                   # Globale stijlen
+&#9474;   &#9500;&#9472;&#9472; firebase.js               # Firebase configuratie &amp; initialisatie
+&#9474;   &#9474;
+&#9474;   &#9500;&#9472;&#9472; components/               # React-componenten
+&#9474;   &#9474;   &#9500;&#9472;&#9472; Login.jsx             # Inlogpagina
+&#9474;   &#9474;   &#9500;&#9472;&#9472; Register.jsx          # Registratiepagina
+&#9474;   &#9474;   &#9500;&#9472;&#9472; Header.jsx            # Paginakop met navigatie
+&#9474;   &#9474;   &#9500;&#9472;&#9472; Footer.jsx            # Paginavoet
+&#9474;   &#9474;   &#9500;&#9472;&#9472; Dashboard.jsx         # Gebruikersdashboard
+&#9474;   &#9474;   &#9500;&#9472;&#9472; ProfielAanvullen.jsx  # Profiel voltooien (onboarding)
+&#9474;   &#9474;   &#9500;&#9472;&#9472; RegistratieFormulier.jsx  # Productregistratieformulier
+&#9474;   &#9474;   &#9500;&#9472;&#9472; MyRegistrations.jsx   # Overzicht eigen registraties
+&#9474;   &#9474;   &#9500;&#9472;&#9472; Shop.jsx              # Webshop met Drops
+&#9474;   &#9474;   &#9500;&#9472;&#9472; MijnBestellingen.jsx  # Overzicht bestellingen
+&#9474;   &#9474;   &#9500;&#9472;&#9472; Instellingen.jsx      # Gebruikersinstellingen
+&#9474;   &#9474;   &#9500;&#9472;&#9472; CookieBanner.jsx      # Cookie-toestemmingsbanner
+&#9474;   &#9474;   &#9500;&#9472;&#9472; LiveSaldoKnop.jsx     # Realtime saldo-indicator
+&#9474;   &#9474;   &#9474;
+&#9474;   &#9474;   &#9492;&#9472;&#9472; Admin/                # Beheercomponenten
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminLayout.jsx       # Admin layout (sidebar + content)
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminDashboard.jsx    # Statistieken &amp; overzicht
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminUsers.jsx        # Gebruikersbeheer
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminInstallers.jsx   # Installateur-synchronisatie
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminRegistraties.jsx # Registratiebeheer
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminProducten.jsx    # Productbeheer (shop)
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminBestellingen.jsx # Bestellingenbeheer
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminPunten.jsx       # Puntenbeheer
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminKoppelen.jsx     # Registraties koppelen
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminImportExport.jsx # Import/export hub
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminLogboek.jsx      # Logboek beheeracties
+&#9474;   &#9474;       &#9500;&#9472;&#9472; AdminInstellingen.jsx # E-mailtemplate beheer
+&#9474;   &#9474;       &#9492;&#9472;&#9472; ImportExport/         # Import/export submodules
+&#9474;   &#9474;           &#9500;&#9472;&#9472; IEUsers.jsx           # Gebruikers CSV
+&#9474;   &#9474;           &#9500;&#9472;&#9472; IERegistrations.jsx   # Registraties CSV
+&#9474;   &#9474;           &#9492;&#9472;&#9472; IEPoints.jsx          # Punten CSV
+&#9474;   &#9474;
+&#9474;   &#9500;&#9472;&#9472; pages/                    # Statische pagina's
+&#9474;   &#9474;   &#9500;&#9472;&#9472; PrivacyPolicy.jsx     # Privacybeleid
+&#9474;   &#9474;   &#9492;&#9472;&#9472; Voorwaarden.jsx       # Algemene voorwaarden
+&#9474;   &#9474;
+&#9474;   &#9500;&#9472;&#9472; hooks/                    # Custom React hooks
+&#9474;   &#9474;   &#9500;&#9472;&#9472; useInstallerProfile.js    # Profielbeheer hook
+&#9474;   &#9474;   &#9500;&#9472;&#9472; usePagination.js          # Paginering hook
+&#9474;   &#9474;   &#9492;&#9472;&#9472; useAutoLogout.js          # Automatisch uitloggen
+&#9474;   &#9474;
+&#9474;   &#9500;&#9472;&#9472; services/                 # Externe services
+&#9474;   &#9474;   &#9492;&#9472;&#9472; mailService.js        # E-mailverzending (EmailJS)
+&#9474;   &#9474;
+&#9474;   &#9500;&#9472;&#9472; utils/                    # Hulpfuncties
+&#9474;   &#9474;   &#9500;&#9472;&#9472; dateUtils.js          # Datumformattering (nl-NL)
+&#9474;   &#9474;   &#9492;&#9472;&#9472; statusUtils.js        # Statuslabels &amp; stijlen
+&#9474;   &#9474;
+&#9474;   &#9500;&#9472;&#9472; adminTools/               # Admin hulpmiddelen
+&#9474;   &#9474;   &#9500;&#9472;&#9472; logAdminAction.js     # Logboek schrijffunctie
+&#9474;   &#9474;   &#9492;&#9472;&#9472; logAdminActions.js    # (Referentie)
+&#9474;   &#9474;
+&#9474;   &#9492;&#9472;&#9472; styles/                   # CSS-bestanden
+&#9474;       &#9500;&#9472;&#9472; theme.css             # Kleurenschema &amp; variabelen
+&#9474;       &#9500;&#9472;&#9472; layout.css            # Lay-out &amp; formulieren
+&#9474;       &#9492;&#9472;&#9472; admin.css             # Admin-specifieke stijlen
+&#9474;
+&#9500;&#9472;&#9472; functions/                    # Firebase Cloud Functions
+&#9474;   &#9500;&#9472;&#9472; index.js                  # Alle serverless functies
+&#9474;   &#9492;&#9472;&#9472; package.json              # Node.js afhankelijkheden
+&#9474;
+&#9500;&#9472;&#9472; public/                       # Statische bestanden
+&#9474;   &#9500;&#9472;&#9472; logo-fegon.png            # Fegon logo
+&#9474;   &#9500;&#9472;&#9472; logo-mijnfegon.png        # MijnFegon logo
+&#9474;   &#9492;&#9472;&#9472; achtergrond.png           # Achtergrondafbeelding login
+&#9474;
+&#9500;&#9472;&#9472; firestore.rules               # Firestore beveiligingsregels
+&#9500;&#9472;&#9472; firebase.json                 # Firebase hosting configuratie
+&#9500;&#9472;&#9472; vite.config.js                # Vite build configuratie
+&#9500;&#9472;&#9472; package.json                  # Project afhankelijkheden
+&#9492;&#9472;&#9472; eslint.config.js              # Linting configuratie</code></pre>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 4. APPLICATIEARCHITECTUUR                                       -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s4">4. Applicatiearchitectuur</h2>
+
+<h3>Opstart (Bootstrap)</h3>
+<ol>
+  <li><code>main.jsx</code> laadt React 19 met StrictMode</li>
+  <li>Firebase wordt ge&iuml;nitialiseerd via <code>firebase.js</code></li>
+  <li><code>BrowserRouter</code> (React Router v7) wordt opgezet</li>
+  <li><code>App.jsx</code> wordt gerenderd als hoofdcomponent</li>
+</ol>
+
+<h3>App.jsx &mdash; Kerncomponent</h3>
+<p><code>App.jsx</code> is het hart van de applicatie en beheert:</p>
+<ul>
+  <li><strong>Authenticatiestatus</strong> via <code>onAuthStateChanged</code> (Firebase Auth)</li>
+  <li><strong>Gebruikersdata</strong> via realtime <code>onSnapshot</code> listener op het Firestore-gebruikersdocument</li>
+  <li><strong>Route-beveiliging</strong> via twee wrapper-componenten:
+    <ul>
+      <li><code>ProtectedRoute</code> &mdash; Alleen voor ingelogde gebruikers met voltooid profiel</li>
+      <li><code>AdminRoute</code> &mdash; Alleen voor gebruikers met <code>role: "admin"</code></li>
+    </ul>
+  </li>
+  <li><strong>Globale layout</strong> met Header, Footer en CookieBanner</li>
+</ul>
+
+<h3>Globale State</h3>
+<p>De applicatie gebruikt geen aparte state management library (geen Redux/Context). State wordt beheerd via:</p>
+<ul>
+  <li><code>user</code> &mdash; Firebase Auth gebruikersobject (of <code>null</code>)</li>
+  <li><code>userData</code> &mdash; Firestore-document met profielgegevens, rol en saldo</li>
+  <li><code>loading</code> &mdash; Laadstatus tijdens authenticatiecontrole</li>
+</ul>
+<p>Deze state wordt als props doorgegeven aan kindcomponenten.</p>
+
+<h3>Realtime Synchronisatie</h3>
+<p>Alle data wordt realtime gesynchroniseerd via Firestore <code>onSnapshot</code> listeners:</p>
+<ul>
+  <li>Gebruikersprofiel: direct bijgewerkt bij elke wijziging</li>
+  <li>Registraties: direct zichtbaar na indiening of statuswijziging</li>
+  <li>Bestellingen: statusupdates direct weergegeven</li>
+  <li>Admin logboek: live bijgewerkt</li>
+</ul>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 5. AUTHENTICATIE & AUTORISATIE                                   -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s5">5. Authenticatie &amp; Autorisatie</h2>
+
+<h3>Inlogmethoden</h3>
+<table>
+  <thead><tr><th>Methode</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td><strong>E-mail/Wachtwoord</strong></td><td>Standaard registratie met validatie</td></tr>
+    <tr><td><strong>Google OAuth</strong></td><td>Inloggen via Google-account met accountselectie</td></tr>
+  </tbody>
+</table>
+
+<h3>Rollen</h3>
+<table>
+  <thead><tr><th>Rol</th><th>Toegang</th></tr></thead>
+  <tbody>
+    <tr><td><code>user</code></td><td>Alle gebruikerspagina's (dashboard, registraties, shop, instellingen)</td></tr>
+    <tr><td><code>admin</code></td><td>Alle gebruikerspagina's + volledig adminpaneel</td></tr>
+  </tbody>
+</table>
+
+<h3>Authenticatiestroom</h3>
+<div class="flow">
+  <p><strong>Nieuwe gebruiker:</strong><br>
+  Registreren <span class="arrow">&rarr;</span> Account aanmaken <span class="arrow">&rarr;</span> Firestore-document aanmaken <span class="arrow">&rarr;</span> Welkomstmail <span class="arrow">&rarr;</span> Profiel Aanvullen <span class="arrow">&rarr;</span> 100 welkomst-Drops <span class="arrow">&rarr;</span> Dashboard</p>
+  <p><strong>Bestaande gebruiker:</strong><br>
+  Inloggen <span class="arrow">&rarr;</span> Auth controle <span class="arrow">&rarr;</span> Profiel voltooid? <span class="arrow">&rarr;</span> Ja: Dashboard / Nee: Profiel Aanvullen</p>
+  <p><strong>Wachtwoord vergeten:</strong><br>
+  E-mail invoeren <span class="arrow">&rarr;</span> Cloud Function <span class="arrow">&rarr;</span> Resetlink per e-mail <span class="arrow">&rarr;</span> Wachtwoord wijzigen <span class="arrow">&rarr;</span> Opnieuw inloggen</p>
+</div>
+
+<h3>Route-beveiliging</h3>
+<ul>
+  <li><strong>Publieke routes</strong> (<code>/login</code>, <code>/register</code>, <code>/privacy</code>, <code>/voorwaarden</code>): Geen authenticatie vereist</li>
+  <li><strong>Beveiligde routes</strong> (<code>/</code>, <code>/shop</code>, etc.): Redirect naar <code>/login</code> als niet ingelogd; redirect naar <code>/profiel-aanvullen</code> als profiel onvolledig</li>
+  <li><strong>Admin routes</strong> (<code>/admin/*</code>): Extra controle op <code>role === "admin"</code></li>
+</ul>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 6. ROUTERING                                                    -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s6">6. Routering</h2>
+
+<h3>Publieke pagina's</h3>
+<table>
+  <thead><tr><th>Route</th><th>Component</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td><code>/login</code></td><td><code>Login.jsx</code></td><td>Inlogpagina</td></tr>
+    <tr><td><code>/register</code></td><td><code>Register.jsx</code></td><td>Nieuwe account aanmaken</td></tr>
+    <tr><td><code>/privacy</code></td><td><code>PrivacyPolicy.jsx</code></td><td>Privacybeleid</td></tr>
+    <tr><td><code>/voorwaarden</code></td><td><code>Voorwaarden.jsx</code></td><td>Algemene voorwaarden</td></tr>
+  </tbody>
+</table>
+
+<h3>Onboarding</h3>
+<table>
+  <thead><tr><th>Route</th><th>Component</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td><code>/profiel-aanvullen</code></td><td><code>ProfielAanvullen.jsx</code></td><td>Profiel voltooien na eerste registratie</td></tr>
+  </tbody>
+</table>
+
+<h3>Beveiligde gebruikerspagina's</h3>
+<table>
+  <thead><tr><th>Route</th><th>Component</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td><code>/</code></td><td><code>Dashboard.jsx</code></td><td>Startpagina met saldo en recente activiteit</td></tr>
+    <tr><td><code>/registratie-product</code></td><td><code>RegistratieFormulier.jsx</code></td><td>Nieuw product registreren</td></tr>
+    <tr><td><code>/mijn-registraties</code></td><td><code>MyRegistrations.jsx</code></td><td>Overzicht eigen registraties</td></tr>
+    <tr><td><code>/mijn-bestellingen</code></td><td><code>MijnBestellingen.jsx</code></td><td>Overzicht bestellingen</td></tr>
+    <tr><td><code>/shop</code></td><td><code>Shop.jsx</code></td><td>Webshop (Drops inwisselen)</td></tr>
+    <tr><td><code>/instellingen</code></td><td><code>Instellingen.jsx</code></td><td>Profiel bewerken, data exporteren, account verwijderen</td></tr>
+  </tbody>
+</table>
+
+<h3>Beheerderspagina's</h3>
+<table>
+  <thead><tr><th>Route</th><th>Component</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td><code>/admin/</code></td><td><code>AdminDashboard.jsx</code></td><td>Statistieken en overzicht</td></tr>
+    <tr><td><code>/admin/users</code></td><td><code>AdminUsers.jsx</code></td><td>Gebruikersbeheer</td></tr>
+    <tr><td><code>/admin/installers</code></td><td><code>AdminInstallers.jsx</code></td><td>Installateur-synchronisatie naar Compenda</td></tr>
+    <tr><td><code>/admin/registraties</code></td><td><code>AdminRegistraties.jsx</code></td><td>Registraties goedkeuren/afwijzen</td></tr>
+    <tr><td><code>/admin/producten</code></td><td><code>AdminProducten.jsx</code></td><td>Shopproducten beheren</td></tr>
+    <tr><td><code>/admin/bestellingen</code></td><td><code>AdminBestellingen.jsx</code></td><td>Bestellingen afhandelen</td></tr>
+    <tr><td><code>/admin/punten</code></td><td><code>AdminPunten.jsx</code></td><td>Punten toekennen en overzicht</td></tr>
+    <tr><td><code>/admin/koppelen</code></td><td><code>AdminKoppelen.jsx</code></td><td>Losse registraties koppelen aan gebruikers</td></tr>
+    <tr><td><code>/admin/import-export</code></td><td><code>AdminImportExport.jsx</code></td><td>CSV import/export</td></tr>
+    <tr><td><code>/admin/logboek</code></td><td><code>AdminLogboek.jsx</code></td><td>Logboek van beheeracties</td></tr>
+    <tr><td><code>/admin/instellingen</code></td><td><code>AdminInstellingen.jsx</code></td><td>E-mailtemplates beheren</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 7. GEBRUIKERSFUNCTIES                                           -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s7">7. Gebruikersfuncties</h2>
+
+<!-- 7.1 -->
+<h3 id="s71">7.1 Registreren</h3>
+<p class="page-ref">Pagina: <code>/register</code> &middot; Component: <code>Register.jsx</code></p>
+
+<h4>Wat doet het?</h4>
+<p>Nieuwe installateurs kunnen een account aanmaken via e-mail en wachtwoord.</p>
+
+<h4>Vereiste velden</h4>
+<ul>
+  <li><strong>Naam</strong> &mdash; Volledige naam van de installateur</li>
+  <li><strong>Bedrijfsnaam</strong> &mdash; Naam van het installatiebedrijf</li>
+  <li><strong>E-mailadres</strong> &mdash; Wordt gebruikt als inlognaam</li>
+  <li><strong>Wachtwoord</strong> &mdash; Minimaal 6 tekens</li>
+  <li><strong>Wachtwoord bevestigen</strong> &mdash; Moet overeenkomen</li>
+  <li><strong>Algemene voorwaarden</strong> &mdash; Acceptatie vereist (vinkje)</li>
+</ul>
+
+<h4>Validaties</h4>
+<ul>
+  <li>Alle velden verplicht</li>
+  <li>Wachtwoorden moeten overeenkomen</li>
+  <li>Wachtwoord minimaal 6 tekens</li>
+  <li>E-mailadres moet geldig zijn (Firebase Auth validatie)</li>
+  <li>Voorwaarden moeten geaccepteerd zijn</li>
+</ul>
+
+<h4>Wat gebeurt er na registratie?</h4>
+<ol>
+  <li>Firebase Auth-account wordt aangemaakt</li>
+  <li>Firestore-gebruikersdocument wordt aangemaakt met: <code>role: "user"</code>, <code>profile_completed: false</code>, <code>saldo: 0</code>, <code>points_total: 0</code></li>
+  <li>Welkomstmail wordt verstuurd</li>
+  <li>Gebruiker wordt doorgestuurd naar <code>/profiel-aanvullen</code></li>
+</ol>
+
+<!-- 7.2 -->
+<h3 id="s72">7.2 Inloggen</h3>
+<p class="page-ref">Pagina: <code>/login</code> &middot; Component: <code>Login.jsx</code></p>
+
+<h4>Inlogmethoden</h4>
+<p><strong>E-mail/Wachtwoord:</strong> Standaard formulier met e-mail en wachtwoord. Foutmeldingen bij verkeerde gegevens.</p>
+<p><strong>Google OAuth:</strong> Klik op &ldquo;Inloggen met Google&rdquo;. Google-accountselectie popup verschijnt. Account wordt automatisch aangemaakt of bijgewerkt in Firestore.</p>
+
+<h4>Wachtwoord vergeten</h4>
+<ol>
+  <li>Klik op &ldquo;Wachtwoord vergeten?&rdquo;</li>
+  <li>Voer e-mailadres in</li>
+  <li>Cloud Function <code>sendPasswordResetLink</code> verstuurt een resetlink per e-mail</li>
+  <li>Klik op de link in de e-mail om een nieuw wachtwoord in te stellen</li>
+</ol>
+
+<h4>Na inloggen</h4>
+<ul>
+  <li><code>last_login</code> wordt bijgewerkt in Firestore</li>
+  <li>Login-teller (<code>stats/dashboard.total_logins</code>) wordt opgehoogd</li>
+  <li>Login wordt gelogd in <code>logs_login</code></li>
+  <li>Doorsturen naar <code>/</code> (dashboard) of <code>/profiel-aanvullen</code> als profiel onvolledig</li>
+</ul>
+
+<!-- 7.3 -->
+<h3 id="s73">7.3 Profiel Aanvullen</h3>
+<p class="page-ref">Pagina: <code>/profiel-aanvullen</code> &middot; Component: <code>ProfielAanvullen.jsx</code></p>
+
+<h4>Doel</h4>
+<p>Na de eerste registratie moet de installateur zijn profiel voltooien met bedrijfs- en adresgegevens. Dit is verplicht voordat andere functies beschikbaar worden.</p>
+
+<h4>Vereiste velden</h4>
+<table>
+  <thead><tr><th>Veld</th><th>Beschrijving</th><th>Validatie</th></tr></thead>
+  <tbody>
+    <tr><td>Voornaam</td><td>Voornaam installateur</td><td>Verplicht</td></tr>
+    <tr><td>Achternaam</td><td>Achternaam installateur</td><td>Verplicht</td></tr>
+    <tr><td>KVK-nummer</td><td>Kamer van Koophandel</td><td>8 cijfers</td></tr>
+    <tr><td>Bedrijfsnaam</td><td>Naam bedrijf</td><td>Verplicht (auto via KVK)</td></tr>
+    <tr><td>Straat</td><td>Straatnaam</td><td>Verplicht</td></tr>
+    <tr><td>Huisnummer</td><td>Huisnummer</td><td>Verplicht</td></tr>
+    <tr><td>Toevoeging</td><td>Huisnummertoevoeging</td><td>Optioneel</td></tr>
+    <tr><td>Postcode</td><td>Postcode (1234 AB)</td><td>Verplicht</td></tr>
+    <tr><td>Plaats</td><td>Plaatsnaam</td><td>Verplicht (auto via PDOK)</td></tr>
+    <tr><td>Telefoonnummer</td><td>Contactnummer</td><td>Verplicht</td></tr>
+    <tr><td>Geboortedatum</td><td>Voor verjaardagspunten</td><td>Optioneel</td></tr>
+  </tbody>
+</table>
+
+<h4>Slimme functies</h4>
+<p><strong>KVK-opzoeken:</strong> Voer een 8-cijferig KVK-nummer in, klik op &ldquo;Opzoeken&rdquo;. Cloud Function <code>kvkCheckHttp</code> haalt bedrijfsgegevens op. Bedrijfsnaam en adres worden automatisch ingevuld.</p>
+<p><strong>PDOK Adres-aanvulling:</strong> Na invoer van postcode en huisnummer worden straat en plaats automatisch opgehaald via de PDOK Locatieserver API.</p>
+
+<h4>Na voltooiing</h4>
+<ol>
+  <li>Profiel wordt opgeslagen in Firestore</li>
+  <li><code>profile_completed</code> wordt op <code>true</code> gezet</li>
+  <li><strong>100 welkomst-Drops</strong> worden toegekend (eenmalig, via Cloud Function <code>awardWelcomePoints</code>)</li>
+  <li>Gebruiker wordt doorgestuurd naar het dashboard</li>
+</ol>
+
+<!-- 7.4 -->
+<h3 id="s74">7.4 Dashboard</h3>
+<p class="page-ref">Pagina: <code>/</code> &middot; Component: <code>Dashboard.jsx</code></p>
+
+<p>Het dashboard is de startpagina na inloggen en toont:</p>
+<ul>
+  <li><strong>Welkomstbericht</strong> &mdash; Begroeting met naam en bedrijf</li>
+  <li><strong>Saldokaart</strong> &mdash; Huidig aantal beschikbare Drops (groot weergegeven), blauwe gradient achtergrond, badge met &ldquo;in behandeling&rdquo; als er punten in afwachting zijn</li>
+  <li><strong>Snelknoppen (primair)</strong> &mdash; Nieuwe Registratie, Shop</li>
+  <li><strong>Snelknoppen (secundair)</strong> &mdash; Mijn Bestellingen, Mijn Registraties, Instellingen</li>
+  <li><strong>Recente Activiteit</strong> &mdash; Laatste 5 registraties met datum, product, status en punten</li>
+</ul>
+
+<!-- 7.5 -->
+<h3 id="s75">7.5 Product Registratie</h3>
+<p class="page-ref">Pagina: <code>/registratie-product</code> &middot; Component: <code>RegistratieFormulier.jsx</code></p>
+
+<h4>Doel</h4>
+<p>Installateurs registreren hier een ge&iuml;nstalleerd waterbehandelingsproduct voor een klant. Na goedkeuring door een beheerder ontvangt de installateur 50 Drops.</p>
+
+<h4>Klantgegevens</h4>
+<table>
+  <thead><tr><th>Veld</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td>Geslacht</td><td>Man / Vrouw</td></tr>
+    <tr><td>Voornaam</td><td>Voornaam klant</td></tr>
+    <tr><td>Tussenvoegsel</td><td>Optioneel</td></tr>
+    <tr><td>Achternaam</td><td>Achternaam klant</td></tr>
+    <tr><td>Postcode</td><td>Klantadres</td></tr>
+    <tr><td>Huisnummer</td><td>+ optionele toevoeging</td></tr>
+    <tr><td>Straat</td><td>Auto-ingevuld via PDOK</td></tr>
+    <tr><td>Plaats</td><td>Auto-ingevuld via PDOK</td></tr>
+    <tr><td>Mobiel</td><td>Mobiel nummer klant</td></tr>
+    <tr><td>E-mail</td><td>E-mailadres klant</td></tr>
+  </tbody>
+</table>
+
+<h4>Productgegevens</h4>
+<table>
+  <thead><tr><th>Veld</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td>Merk</td><td>AquaStar, DigiSoft, Lavigo, Kalkfri, Descale, Softy, Talent, Anders</td></tr>
+    <tr><td>Model</td><td>Afhankelijk van merk (vaste lijst of vrij tekstveld bij &ldquo;Anders&rdquo;)</td></tr>
+    <tr><td>Serienummer</td><td>Uniek serienummer van het product</td></tr>
+    <tr><td>Installatiedatum</td><td>Datum van installatie</td></tr>
+  </tbody>
+</table>
+
+<h4>Validaties en waarschuwingen</h4>
+<ul>
+  <li><strong>Serienummer</strong>: 2 letters + 6 cijfers (Talent/Delta: 9&ndash;11 cijfers)</li>
+  <li><strong>Installatiedatum</strong>: Waarschuwing als &gt;1 jaar geleden</li>
+  <li><strong>PDOK</strong>: Automatisch adres aanvullen bij postcode + huisnummer</li>
+  <li><strong>Toestemming</strong>: Klant-toestemming is verplicht</li>
+</ul>
+
+<h4>Na indiening</h4>
+<ol>
+  <li>Document wordt opgeslagen in Firestore met <code>status: "pending"</code></li>
+  <li>Bevestigingsmail wordt verstuurd naar de installateur</li>
+  <li>Registratie verschijnt bij de beheerder ter goedkeuring</li>
+  <li>Installateur ziet de registratie terug bij &ldquo;Mijn Registraties&rdquo;</li>
+</ol>
+
+<!-- 7.6 -->
+<h3 id="s76">7.6 Mijn Registraties</h3>
+<p class="page-ref">Pagina: <code>/mijn-registraties</code> &middot; Component: <code>MyRegistrations.jsx</code></p>
+
+<p>Een tabel met alle registraties van de ingelogde installateur. Klik op een rij voor uitklapbare details.</p>
+
+<table>
+  <thead><tr><th>Status</th><th>Kleur</th><th>Punten</th></tr></thead>
+  <tbody>
+    <tr><td><span class="badge badge-green">Goedgekeurd</span></td><td>Groen</td><td>+50 Drops</td></tr>
+    <tr><td><span class="badge badge-yellow">In Behandeling</span></td><td>Geel</td><td>&mdash;</td></tr>
+    <tr><td><span class="badge badge-grey">Afgekeurd</span></td><td>Grijs</td><td>0 Drops</td></tr>
+  </tbody>
+</table>
+<p>De tabel wordt realtime bijgewerkt wanneer een beheerder een registratie goedkeurt of afwijst.</p>
+
+<!-- 7.7 -->
+<h3 id="s77">7.7 Shop</h3>
+<p class="page-ref">Pagina: <code>/shop</code> &middot; Component: <code>Shop.jsx</code></p>
+
+<p>Installateurs kunnen hun verdiende Drops inwisselen voor producten in de webshop.</p>
+<ul>
+  <li><strong>Categoriefilter</strong>: Filter op categorie (configureerbaar door beheerder)</li>
+  <li><strong>Productoverzicht</strong>: Grid met afbeeldingen, beschrijvingen en prijzen</li>
+  <li><strong>Bestellen</strong>: Klik om te bestellen met bevestigingsdialoog</li>
+  <li><strong>Minimaal saldo</strong>: 250 Drops vereist om de shop te gebruiken</li>
+</ul>
+
+<div class="info-block">
+  <p><strong>Let op:</strong> Als het saldo &lt; 250 Drops is, wordt de shop visueel vergrendeld met melding.</p>
+</div>
+
+<!-- 7.8 -->
+<h3 id="s78">7.8 Mijn Bestellingen</h3>
+<p class="page-ref">Pagina: <code>/mijn-bestellingen</code> &middot; Component: <code>MijnBestellingen.jsx</code></p>
+
+<p>Overzicht van alle bestellingen met product, datum, prijs (Drops) en status.</p>
+<table>
+  <thead><tr><th>Status</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td><span class="badge badge-blue">Nieuw</span></td><td>Bestelling ontvangen</td></tr>
+    <tr><td><span class="badge badge-yellow">In behandeling</span></td><td>Bestelling wordt verwerkt</td></tr>
+    <tr><td><span class="badge badge-green">Verzonden</span></td><td>Product is verstuurd</td></tr>
+    <tr><td><span class="badge badge-red">Geannuleerd</span></td><td>Bestelling is geannuleerd</td></tr>
+  </tbody>
+</table>
+
+<!-- 7.9 -->
+<h3 id="s79">7.9 Instellingen</h3>
+<p class="page-ref">Pagina: <code>/instellingen</code> &middot; Component: <code>Instellingen.jsx</code> &middot; Hook: <code>useInstallerProfile.js</code></p>
+
+<h4>Profielbeheer</h4>
+<p>De installateur kan zijn profielgegevens bijwerken: naam, KVK, bedrijf, telefoon, adres, geboortedatum. Bij het opslaan wordt een e-mailnotificatie verstuurd.</p>
+
+<h4>Gegevensexport (AVG Artikel 20)</h4>
+<p>Download een JSON-bestand met alle profiel- en registratiegegevens. Bestandsnaam: <code>mijnfegon-export-JJJJ-MM-DD.json</code></p>
+
+<h4>Account verwijderen (AVG Artikel 17)</h4>
+<ol>
+  <li>Klik op &ldquo;Account verwijderen&rdquo;</li>
+  <li>Type het woord <strong>&ldquo;VERWIJDEREN&rdquo;</strong> als bevestiging</li>
+  <li>Cloud Function <code>deleteUserAccount</code> wordt aangeroepen</li>
+  <li>Firebase Auth-account wordt verwijderd, gegevens geanonimiseerd</li>
+  <li>Gebruiker wordt automatisch uitgelogd</li>
+</ol>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 8. BEHEERDERSFUNCTIES (ADMIN)                                   -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s8">8. Beheerdersfuncties (Admin)</h2>
+
+<p>Het adminpaneel is beschikbaar voor gebruikers met <code>role: "admin"</code> en bereikbaar via <code>/admin/</code>. Het paneel heeft een eigen layout met zijbalkmenu: Dashboard, Gebruikers, Installateurs, Registraties, Producten, Bestellingen, Punten, Koppelen, Import/Export, Logboek, Instellingen.</p>
+
+<!-- 8.1 -->
+<h3 id="s81">8.1 Admin Dashboard</h3>
+<p class="page-ref">Pagina: <code>/admin/</code> &middot; Component: <code>AdminDashboard.jsx</code></p>
+
+<table>
+  <thead><tr><th>Metriek</th><th>Beschrijving</th><th>Bron</th></tr></thead>
+  <tbody>
+    <tr><td>Totaal gebruikers</td><td>Aantal geregistreerde installateurs</td><td><code>getCountFromServer(users)</code></td></tr>
+    <tr><td>Nieuwe gebruikers</td><td>Aangemeld deze maand</td><td>Query met datumfilter</td></tr>
+    <tr><td>Totaal registraties</td><td>Ingediende registraties</td><td><code>getCountFromServer(registrations)</code></td></tr>
+    <tr><td>Totaal logins</td><td>Aantal keer ingelogd</td><td><code>stats/dashboard.total_logins</code></td></tr>
+    <tr><td>Totaal verdiende Drops</td><td>Som alle <code>points_total</code></td><td>Berekend</td></tr>
+    <tr><td>Totaal beschikbare Drops</td><td>Som alle <code>saldo</code></td><td>Berekend</td></tr>
+  </tbody>
+</table>
+<p>Klik op een metriek om een gedetailleerde, sorteerbare tabel te openen.</p>
+
+<!-- 8.2 -->
+<h3 id="s82">8.2 Gebruikersbeheer</h3>
+<p class="page-ref">Pagina: <code>/admin/users</code> &middot; Component: <code>AdminUsers.jsx</code></p>
+
+<p>Tabel met e-mail, naam, bedrijf, aanmaakdatum, aantal registraties, punten en saldo. Zoekbaar, sorteerbaar, gepagineerd (25/pagina).</p>
+
+<!-- 8.3 -->
+<h3 id="s83">8.3 Installateurs (Compenda Sync)</h3>
+<p class="page-ref">Pagina: <code>/admin/installers</code> &middot; Component: <code>AdminInstallers.jsx</code></p>
+
+<p>Synchronisatie van installateurprofielen met het externe Compenda-systeem:</p>
+<ol>
+  <li>Installateurprofiel ophalen uit Firebase</li>
+  <li>Controle of <code>compenda_company_id</code> al gekoppeld is</li>
+  <li>Zo niet: zoeken in Compenda op bedrijfsnaam of e-mail</li>
+  <li>Niet gevonden: automatisch aanmaken in Compenda</li>
+  <li><code>compenda_company_id</code> opslaan in Firebase</li>
+</ol>
+
+<!-- 8.4 -->
+<h3 id="s84">8.4 Registratiebeheer</h3>
+<p class="page-ref">Pagina: <code>/admin/registraties</code> &middot; Component: <code>AdminRegistraties.jsx</code></p>
+
+<p>Tabel van alle registraties met uitklapbare details en inline goedkeuring/afwijzing.</p>
+
+<h4>Serienummeranalyse</h4>
+<ul>
+  <li><strong>Formaatvalidatie</strong>: 2 letters + 6 cijfers</li>
+  <li><strong>Talent/Delta</strong>: 9&ndash;11 cijfers</li>
+  <li><strong>Datumvalidatie</strong>: Installatiedatum vs. productiedatum</li>
+</ul>
+
+<h4>Goedkeuringsworkflow</h4>
+<div class="flow">
+  <ol>
+    <li>Beheerder klikt &ldquo;Goedkeuren&rdquo;</li>
+    <li>Cloud Function <code>approveRegistration</code> wordt aangeroepen</li>
+    <li>De functie:
+      <ul>
+        <li>Controleert/maakt installateur in Compenda</li>
+        <li>Verstuurt registratie naar Compenda API</li>
+        <li>Kent 50 Drops toe (atomische batch-update)</li>
+        <li>Verstuurt goedkeuringsmails</li>
+        <li>Zet <code>synced_to_compenda: true</code></li>
+      </ul>
+    </li>
+    <li>Status &rarr; <code>approved</code>, punten: 50</li>
+    <li>Beheeractie wordt gelogd</li>
+  </ol>
+</div>
+
+<h4>Afwijzing</h4>
+<p>Status wordt <code>rejected</code>. Geen punten. Actie wordt gelogd met reden.</p>
+
+<!-- 8.5 -->
+<h3 id="s85">8.5 Productenbeheer</h3>
+<p class="page-ref">Pagina: <code>/admin/producten</code> &middot; Component: <code>AdminProducten.jsx</code></p>
+
+<p>Toevoegen, bewerken, verwijderen van shopproducten. Afbeelding uploaden naar Firebase Storage. Actief/inactief toggle. Categorie&euml;n configureerbaar via <code>settings/shop_config</code>.</p>
+
+<table>
+  <thead><tr><th>Veld</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td>Naam</td><td>Productnaam</td></tr>
+    <tr><td>Beschrijving</td><td>Productomschrijving</td></tr>
+    <tr><td>Prijs</td><td>Prijs in Drops</td></tr>
+    <tr><td>Afbeelding</td><td>URL of upload</td></tr>
+    <tr><td>Categorie</td><td>Productcategorie</td></tr>
+    <tr><td>Actief</td><td>Zichtbaar in shop (ja/nee)</td></tr>
+  </tbody>
+</table>
+
+<!-- 8.6 -->
+<h3 id="s86">8.6 Bestellingenbeheer</h3>
+<p class="page-ref">Pagina: <code>/admin/bestellingen</code> &middot; Component: <code>AdminBestellingen.jsx</code></p>
+
+<p>Tabel met gebruiker, product, Drops, datum en status. Beheerder kan status wijzigen via dropdown: Nieuw &rarr; In behandeling &rarr; Verzonden (of Geannuleerd). Wijzigingen zijn realtime zichtbaar.</p>
+
+<!-- 8.7 -->
+<h3 id="s87">8.7 Puntenbeheer</h3>
+<p class="page-ref">Pagina: <code>/admin/punten</code> &middot; Component: <code>AdminPunten.jsx</code></p>
+
+<table>
+  <thead><tr><th>Kolom</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td>Naam</td><td>Installateursnaam</td></tr>
+    <tr><td>Bedrijf</td><td>Bedrijfsnaam</td></tr>
+    <tr><td>E-mail</td><td>E-mailadres</td></tr>
+    <tr><td>Verdiend</td><td>Totaal ooit verdiende Drops</td></tr>
+    <tr><td>Beschikbaar</td><td>Huidig inwisselbaar saldo</td></tr>
+    <tr><td>Uitgegeven</td><td>Verschil (verdiend &minus; beschikbaar)</td></tr>
+    <tr><td>In behandeling</td><td>Aantal registraties met status &ldquo;pending&rdquo;</td></tr>
+  </tbody>
+</table>
+<p>Zoeken, filteren, sorteren, pagineren. Handmatige aanpassing mogelijk. Alle wijzigingen worden gelogd.</p>
+
+<!-- 8.8 -->
+<h3 id="s88">8.8 Registraties Koppelen</h3>
+<p class="page-ref">Pagina: <code>/admin/koppelen</code> &middot; Component: <code>AdminKoppelen.jsx</code></p>
+
+<p>Koppel weesregistraties (zonder <code>installer_uid</code>) aan gebruikers. Automatische matching op e-mailadres of handmatige selectie. Actie wordt gelogd.</p>
+
+<!-- 8.9 -->
+<h3 id="s89">8.9 Import/Export</h3>
+<p class="page-ref">Pagina: <code>/admin/import-export</code> &middot; Component: <code>AdminImportExport.jsx</code></p>
+
+<p>Drie tabbladen:</p>
+<table>
+  <thead><tr><th>Tabblad</th><th>Component</th><th>Export</th><th>Import</th></tr></thead>
+  <tbody>
+    <tr><td>Gebruikers</td><td><code>IEUsers.jsx</code></td><td>Alle gebruikers als CSV</td><td>CSV &rarr; batch upsert</td></tr>
+    <tr><td>Registraties</td><td><code>IERegistrations.jsx</code></td><td>Alle registraties als CSV</td><td>CSV &rarr; aanmaken/bijwerken</td></tr>
+    <tr><td>Punten</td><td><code>IEPoints.jsx</code></td><td>Punten per gebruiker als CSV</td><td>CSV &rarr; batch-update + logging</td></tr>
+  </tbody>
+</table>
+<p>CSV-verwerking via <strong>PapaParse</strong>. Client-side verwerking met batch Firestore-operaties.</p>
+
+<!-- 8.10 -->
+<h3 id="s810">8.10 Logboek</h3>
+<p class="page-ref">Pagina: <code>/admin/logboek</code> &middot; Component: <code>AdminLogboek.jsx</code></p>
+
+<p>Onveranderlijk (immutable) logboek. Realtime stream van de laatste 300 beheeracties. Filterbaar op type en beheerder.</p>
+
+<table>
+  <thead><tr><th>Type</th><th>Voorbeelden</th></tr></thead>
+  <tbody>
+    <tr><td><code>user_create</code></td><td>Nieuwe gebruiker aangemaakt</td></tr>
+    <tr><td><code>user_update</code></td><td>Gebruikersprofiel bijgewerkt</td></tr>
+    <tr><td><code>user_delete</code></td><td>Gebruikersaccount verwijderd</td></tr>
+    <tr><td><code>points_award</code></td><td>Punten toegekend</td></tr>
+    <tr><td><code>points_deduct</code></td><td>Punten afgetrokken</td></tr>
+    <tr><td><code>product_create</code></td><td>Nieuw product toegevoegd</td></tr>
+    <tr><td><code>product_update</code></td><td>Product bijgewerkt</td></tr>
+    <tr><td><code>product_delete</code></td><td>Product verwijderd</td></tr>
+    <tr><td><code>registration_approve</code></td><td>Registratie goedgekeurd</td></tr>
+    <tr><td><code>registration_reject</code></td><td>Registratie afgewezen</td></tr>
+    <tr><td><code>linking_registration_installer</code></td><td>Registratie gekoppeld aan installateur</td></tr>
+  </tbody>
+</table>
+
+<div class="info-block">
+  <p><strong>Beveiliging:</strong> Logregels zijn onveranderlijk. Firestore-regels blokkeren updates en verwijderingen. Alleen beheerders kunnen logregels aanmaken en lezen.</p>
+</div>
+
+<!-- 8.11 -->
+<h3 id="s811">8.11 Admin Instellingen</h3>
+<p class="page-ref">Pagina: <code>/admin/instellingen</code> &middot; Component: <code>AdminInstellingen.jsx</code></p>
+<p>Bekijk en bewerk onderwerp en HTML-inhoud van EmailJS-templates. Opslaan werkt de <code>mailTemplates</code> collectie bij in Firestore.</p>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 9. PUNTENSYSTEEM (DROPS)                                        -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s9">9. Puntensysteem (Drops)</h2>
+
+<p>Het loyaliteitsprogramma van MijnFegon werkt met <strong>Drops</strong> als virtuele munteenheid.</p>
+
+<h3>Drops verdienen</h3>
+<table>
+  <thead><tr><th>Actie</th><th>Drops</th><th>Frequentie</th></tr></thead>
+  <tbody>
+    <tr><td>Profiel voltooien (welkomstbonus)</td><td>100</td><td>Eenmalig</td></tr>
+    <tr><td>Productregistratie goedgekeurd</td><td>50</td><td>Per registratie</td></tr>
+    <tr><td>Verjaardag</td><td>100</td><td>Jaarlijks</td></tr>
+  </tbody>
+</table>
+
+<h3>Drops uitgeven</h3>
+<table>
+  <thead><tr><th>Actie</th><th>Voorwaarde</th></tr></thead>
+  <tbody>
+    <tr><td>Product kopen in shop</td><td>Minimaal 250 Drops saldo vereist</td></tr>
+  </tbody>
+</table>
+
+<h3>Velden in Firestore</h3>
+<table>
+  <thead><tr><th>Veld</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td><code>saldo</code></td><td>Beschikbare (inwisselbare) Drops</td></tr>
+    <tr><td><code>points_total</code></td><td>Totaal ooit verdiende Drops</td></tr>
+    <tr><td><code>points_pending</code></td><td>Drops in afwachting van goedkeuring</td></tr>
+  </tbody>
+</table>
+
+<h3>Berekening</h3>
+<ul>
+  <li><strong>Verdiend:</strong> <code>points_total</code> (wordt alleen opgehoogd)</li>
+  <li><strong>Beschikbaar:</strong> <code>saldo</code> (opgehoogd bij verdienen, verlaagd bij uitgeven)</li>
+  <li><strong>Uitgegeven:</strong> <code>points_total - saldo</code></li>
+</ul>
+
+<h3>Welkomstbonus</h3>
+<p>Eenmalig 100 Drops via Cloud Function <code>awardWelcomePoints</code> (idempotent &mdash; controleert <code>welcome_points_awarded</code> vlag).</p>
+
+<h3>Verjaardagsbonus</h3>
+<p>Dagelijks om 08:00 uur (tijdzone Amsterdam) controleert een geplande Cloud Function. Gebruikers met geboortedatum = vandaag ontvangen 100 bonus-Drops. Controle op <code>birthday_points_year</code> voorkomt dubbele toekenning.</p>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 10. FIREBASE STRUCTUUR                                          -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s10">10. Firebase Structuur</h2>
+
+<h3 id="s101">10.1 Firestore Collecties</h3>
+
+<h4><code>users/{uid}</code> &mdash; Gebruikersprofielen</h4>
+<pre><code>{
+  uid: "Firebase Auth UID",
+  email: "installateur@bedrijf.nl",
+  installer_full_name: "Jan de Vries",
+  installer_company: "Waterbedrijf BV",
+  installer_phone: "0612345678",
+  installer_kvk: "12345678",
+  installer_address: "Hoofdstraat 1, 1234 AB Amsterdam",
+  firstName: "Jan",
+  lastName: "de Vries",
+  street: "Hoofdstraat",
+  houseNumber: "1",
+  postalCode: "1234 AB",
+  city: "Amsterdam",
+  phoneNumber: "0612345678",
+  birthDate: "1985-03-15",
+  role: "user",                    // "user" of "admin"
+  profile_completed: true,
+  saldo: 250,                      // Beschikbare Drops
+  points_total: 350,               // Totaal verdiende Drops
+  points_pending: 0,
+  compenda_company_id: "12345",    // Compenda koppeling
+  welcome_points_awarded: true,    // Welkomstbonus toegekend
+  birthday_points_year: 2025,      // Laatste verjaardagsbonus jaar
+  createdAt: Timestamp,
+  updatedAt: Timestamp,
+  last_login: Timestamp
+}</code></pre>
+
+<h4><code>registrations/{docId}</code> &mdash; Productregistraties</h4>
+<pre><code>{
+  installer_uid: "Firebase Auth UID",
+  installer_email: "installateur@bedrijf.nl",
+  installer_name: "Jan de Vries",
+  installer_company: "Waterbedrijf BV",
+  customer_gender: "male",
+  customer_first_name: "Piet",
+  customer_last_name: "Berg",
+  customer_postcode: "5678 CD",
+  customer_street: "Kerkstraat",
+  customer_city: "Rotterdam",
+  customer_email: "klant@email.nl",
+  product_brand: "AquaStar",
+  product_model: "AS-500",
+  product_installation_date: "2025-11-20",
+  product_serial_number: "AB123456",
+  status: "pending",               // "pending", "approved", "rejected"
+  points_awarded: 0,               // 50 bij goedkeuring
+  consent_personal_data: true,
+  consent_accepted_at: Timestamp,
+  synced_to_compenda: false,
+  created_at: Timestamp
+}</code></pre>
+
+<h4><code>orders/{docId}</code> &mdash; Bestellingen</h4>
+<pre><code>{
+  userId: "Firebase Auth UID",
+  productId: "product_doc_id",
+  productName: "Bosch Waterpas",
+  userName: "Jan de Vries",
+  price: 150,                      // Betaalde Drops
+  status: "Nieuw",                 // "Nieuw", "In behandeling", "Verzonden", "Geannuleerd"
+  createdAt: Timestamp
+}</code></pre>
+
+<h4><code>products/{docId}</code> &mdash; Shopproducten</h4>
+<pre><code>{
+  name: "Bosch Waterpas",
+  description: "Professionele waterpas 60cm",
+  price: 150,
+  image: "https://storage.url/afbeelding.jpg",
+  category: "Gereedschap",
+  active: true,
+  createdAt: Timestamp
+}</code></pre>
+
+<h4><code>logs_admin/{docId}</code> &mdash; Beheerlogboek</h4>
+<pre><code>{
+  type: "registration_approve",
+  description: "Registratie AB123456 goedgekeurd",
+  collectionName: "registrations",
+  docId: "reg_doc_id",
+  before: { status: "pending" },
+  after: { status: "approved" },
+  adminUid: "admin_uid",
+  adminEmail: "admin@fegon.nl",
+  createdAt: Timestamp
+}</code></pre>
+
+<h4>Overige collecties</h4>
+<ul>
+  <li><code>logs_login/{docId}</code> &mdash; Inloglogboek (uid, email, method, timestamp)</li>
+  <li><code>stats/dashboard</code> &mdash; Statistieken (<code>total_logins</code>)</li>
+  <li><code>settings/shop_config</code> &mdash; Shopcategorie&euml;n</li>
+</ul>
+
+<h3 id="s102">10.2 Beveiligingsregels</h3>
+
+<table>
+  <thead><tr><th>Collectie</th><th>Lezen</th><th>Schrijven</th><th>Bijzonderheden</th></tr></thead>
+  <tbody>
+    <tr><td><code>users</code></td><td>Eigen doc of admin</td><td>Aanmaken: role=user, 0 punten</td><td>Profiel-velden beperkt; admin mag alles</td></tr>
+    <tr><td><code>registrations</code></td><td>Eigen of admin</td><td>Aanmaken: status=pending</td><td>Update/delete alleen admin</td></tr>
+    <tr><td><code>orders</code></td><td>Eigen of admin</td><td>Aanmaken: eigen</td><td>Update/delete alleen admin</td></tr>
+    <tr><td><code>logs_admin</code></td><td>Alleen admin</td><td>Alleen admin (aanmaken)</td><td><strong>Onveranderlijk</strong> (geen update/delete)</td></tr>
+    <tr><td><code>stats/dashboard</code></td><td>Alle auth users</td><td>Increment <code>total_logins</code></td><td>Admin heeft volledig beheer</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 11. CLOUD FUNCTIONS                                             -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s11">11. Cloud Functions</h2>
+
+<p>Alle serverless functies draaien op <strong>Firebase Cloud Functions</strong> in de regio <code>europe-west1</code> (Belgi&euml;).</p>
+
+<table>
+  <thead><tr><th>Functie</th><th>Type</th><th>Doel</th></tr></thead>
+  <tbody>
+    <tr><td><code>approveRegistration</code></td><td>onCall, admin</td><td>Registratie goedkeuren, Compenda sync, 50 Drops toekennen</td></tr>
+    <tr><td><code>awardWelcomePoints</code></td><td>onCall, user</td><td>100 welkomst-Drops (idempotent)</td></tr>
+    <tr><td><code>sendPasswordResetLink</code></td><td>onCall, publiek</td><td>Wachtwoord-resetlink per e-mail</td></tr>
+    <tr><td><code>purchaseProduct</code></td><td>onCall, user</td><td>Product kopen met Drops (min. 250)</td></tr>
+    <tr><td><code>kvkCheckHttp</code></td><td>onRequest, publiek</td><td>KVK-nummer verifi&euml;ren via externe API</td></tr>
+    <tr><td><code>deleteUserAccount</code></td><td>onCall, user</td><td>AVG-conforme accountverwijdering + anonimisering</td></tr>
+    <tr><td>Verjaardagspunten</td><td>onSchedule</td><td>Dagelijks 08:00: 100 Drops bij verjaardag</td></tr>
+    <tr><td>Heractivering</td><td>onSchedule</td><td>Wekelijks: e-mail bij &gt;90 dagen inactief</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 12. EXTERNE KOPPELINGEN                                         -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s12">12. Externe Koppelingen</h2>
+
+<h3 id="s121">12.1 Compenda API</h3>
+<p><strong>URL:</strong> <code>https://mijnfegontest.compenda-app.nl</code> (testomgeving)<br>
+<strong>Authenticatie:</strong> Bearer token (<code>COMPENDA_TOKEN</code> secret)</p>
+
+<h4>Installateurkoppeling</h4>
+<ol>
+  <li>Installateurprofiel ophalen uit Firebase</li>
+  <li>Controleren of <code>compenda_company_id</code> al opgeslagen is</li>
+  <li>Verifi&euml;ren dat opgeslagen ID geldig is (<code>GET /companies/{id}</code>)</li>
+  <li>Zo niet: zoek bedrijf (<code>GET /companies?search=...</code>)</li>
+  <li>Niet gevonden: maak aan (<code>POST /companies</code>)</li>
+  <li>Sla <code>compenda_company_id</code> op in Firebase</li>
+</ol>
+
+<h4>Registratieverzending</h4>
+<pre><code>POST /companies/{company_id}/registrations
+
+{
+  serial_number: "AB123456",
+  brand: "AquaStar",
+  model: "AS-500",
+  installation_date: "2025-11-20",
+  customer: {
+    full_name: "Piet van Berg",
+    email: "klant@email.nl",
+    phone_number: "0687654321",
+    gender: "male",
+    address: {
+      street: "Kerkstraat",
+      house_number: "42",
+      postal_code: "5678 CD",
+      city: "Rotterdam",
+      country: "NL"
+    }
+  }
+}</code></pre>
+
+<h3 id="s122">12.2 KVK API</h3>
+<p>Verificatie van KVK-nummers via Cloud Function <code>kvkCheckHttp</code>. Retourneert bedrijfsnaam en adresgegevens. Gebruikt bij profiel aanvullen en instellingen.</p>
+
+<h3 id="s123">12.3 PDOK Adresservice</h3>
+<p><strong>API:</strong> <code>https://api.pdok.nl/bzk/locatieserver/search/v3_1/free</code></p>
+<p>Automatisch aanvullen van straat en plaats op basis van postcode en huisnummer. Gebruikt bij profiel aanvullen, registratieformulier en instellingen.</p>
+
+<h3 id="s124">12.4 EmailJS</h3>
+<p><strong>Service ID:</strong> <code>service_jo37avf</code></p>
+<p>E-mailverzending client-side via <code>@emailjs/browser</code> SDK en server-side via EmailJS REST API.</p>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 13. E-MAILSYSTEEM                                               -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s13">13. E-mailsysteem</h2>
+
+<h3>Overzicht van e-mailtemplates</h3>
+<table>
+  <thead><tr><th>Template</th><th>Naam</th><th>Trigger</th><th>Ontvanger</th></tr></thead>
+  <tbody>
+    <tr><td><code>template_g3qdnvi</code></td><td>Welkomstmail</td><td>Accountregistratie</td><td>Installateur</td></tr>
+    <tr><td><code>template_0r7gx12</code></td><td>Wachtwoord reset</td><td>Wachtwoord vergeten</td><td>Gebruiker</td></tr>
+    <tr><td><code>template_yhh1q9v</code></td><td>Bevestiging indiening</td><td>Na registratie-indiening</td><td>Installateur</td></tr>
+    <tr><td><code>template_6uikpzw</code></td><td>Eerste registratie</td><td>Eerste registratie goedgekeurd</td><td>Installateur</td></tr>
+    <tr><td><code>template_wpc7r3y</code></td><td>Goedkeuring</td><td>Registratie goedgekeurd</td><td>Installateur</td></tr>
+    <tr><td><code>template_ruu8qfg</code></td><td>Verjaardag</td><td>Verjaardagsbonus (dagelijks)</td><td>Installateur</td></tr>
+    <tr><td><code>template_rri4zql</code></td><td>Heractivering</td><td>&gt;90 dagen inactief</td><td>Installateur</td></tr>
+    <tr><td><code>template_k4ntgd9</code></td><td>Admin notificatie</td><td>Registratie goedgekeurd</td><td>gilmar.korts@fegon.nl</td></tr>
+  </tbody>
+</table>
+
+<h3>Mailfuncties (<code>mailService.js</code>)</h3>
+<table>
+  <thead><tr><th>Functie</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td><code>sendWelcomeEmail(email, naam)</code></td><td>Welkomstmail bij registratie</td></tr>
+    <tr><td><code>sendSubmissionConfirmation(reg)</code></td><td>Bevestiging na indiening registratie</td></tr>
+    <tr><td><code>sendApprovalEmails(reg, id, punten, eerste)</code></td><td>Goedkeuringsmail naar installateur + admin</td></tr>
+    <tr><td><code>sendProfileChangedEmail(email, naam)</code></td><td>Melding bij profielwijziging</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 14. STYLING & THEMA                                             -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s14">14. Styling &amp; Thema</h2>
+
+<h3>Kleurenschema</h3>
+<table>
+  <thead><tr><th>Variabele</th><th>Kleur</th><th>Gebruik</th></tr></thead>
+  <tbody>
+    <tr><td><code>--primary</code></td><td style="background:#0066ff;color:#fff;text-align:center;border-radius:3px">#0066ff</td><td>Knoppen, links, accenten</td></tr>
+    <tr><td><code>--primary-dark</code></td><td style="background:#002b5c;color:#fff;text-align:center;border-radius:3px">#002b5c</td><td>Header, donkere elementen</td></tr>
+    <tr><td><code>--bg</code></td><td style="background:#f5f7fa;text-align:center;border-radius:3px">#f5f7fa</td><td>Pagina-achtergrond</td></tr>
+    <tr><td><code>--text</code></td><td style="background:#1a1a1a;color:#fff;text-align:center;border-radius:3px">#1a1a1a</td><td>Standaard tekst</td></tr>
+    <tr><td><code>--card</code></td><td style="background:#fff;border:1px solid #ddd;text-align:center;border-radius:3px">#ffffff</td><td>Kaarten en panelen</td></tr>
+    <tr><td>Succes</td><td style="background:#16a34a;color:#fff;text-align:center;border-radius:3px">#16a34a</td><td>Goedgekeurde statussen</td></tr>
+    <tr><td>Fout</td><td style="background:#ff4d4f;color:#fff;text-align:center;border-radius:3px">#ff4d4f</td><td>Foutmeldingen</td></tr>
+    <tr><td>Waarschuwing</td><td style="background:#f59e0b;color:#fff;text-align:center;border-radius:3px">#f59e0b</td><td>Waarschuwingen</td></tr>
+  </tbody>
+</table>
+
+<h3>CSS-bestanden</h3>
+<table>
+  <thead><tr><th>Bestand</th><th>Inhoud</th></tr></thead>
+  <tbody>
+    <tr><td><code>theme.css</code></td><td>CSS-variabelen, knopstijlen, basiscomponenten</td></tr>
+    <tr><td><code>layout.css</code></td><td>Paginaindeling, formulieren, navigatie, kaarten</td></tr>
+    <tr><td><code>admin.css</code></td><td>Adminpaneel layout, tabellen, sidebar, statistiekkaarten</td></tr>
+    <tr><td><code>App.css</code></td><td>Globale container-instellingen</td></tr>
+  </tbody>
+</table>
+
+<p>De applicatie is responsief ontworpen met CSS-media-queries.</p>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 15. PRIVACY & AVG/GDPR                                          -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s15">15. Privacy &amp; AVG/GDPR</h2>
+
+<p>MijnFegon voldoet aan de Algemene Verordening Gegevensbescherming (AVG/GDPR):</p>
+
+<table>
+  <thead><tr><th>AVG-artikel</th><th>Implementatie</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Art. 6 &mdash; Toestemming</strong></td><td>Cookie-toestemmingsbanner, toestemmingsvinkjes bij registratie</td></tr>
+    <tr><td><strong>Art. 13 &mdash; Informatieverstrekking</strong></td><td>Privacybeleid-pagina (<code>/privacy</code>)</td></tr>
+    <tr><td><strong>Art. 17 &mdash; Recht op vergetelheid</strong></td><td>Accountverwijdering met data-anonimisering</td></tr>
+    <tr><td><strong>Art. 20 &mdash; Dataportabiliteit</strong></td><td>Gegevensexport als JSON-bestand</td></tr>
+  </tbody>
+</table>
+
+<h3>Toestemmingsregistratie</h3>
+<p>Bij elke productregistratie wordt vastgelegd:</p>
+<ul>
+  <li><code>consent_personal_data</code>: Toestemming voor gegevensverwerking</li>
+  <li><code>consent_accepted_at</code>: Tijdstempel van toestemming</li>
+  <li><code>consent_privacy_policy_version</code>: Versie van het privacybeleid</li>
+  <li><code>installer_confirmed_customer_consent</code>: Bevestiging door installateur</li>
+</ul>
+
+<h3>Cookie-toestemming</h3>
+<p><code>CookieBanner.jsx</code> toont een banner bij het eerste bezoek. Keuze wordt opgeslagen in <code>localStorage</code>.</p>
+
+<h3>Accountverwijdering</h3>
+<p>Via Instellingen &gt; &ldquo;Account verwijderen&rdquo;. Bevestiging door &ldquo;VERWIJDEREN&rdquo; te typen. Firebase Auth verwijderd, gegevens geanonimiseerd.</p>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 16. DEPLOYMENT & HOSTING                                        -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s16">16. Deployment &amp; Hosting</h2>
+
+<h3>Firebase Hosting</h3>
+<p>Public folder: <code>dist</code> (Vite-output). SPA routing: alle routes &rarr; <code>/index.html</code>.</p>
+
+<h3>Beveiligingsheaders</h3>
+<table>
+  <thead><tr><th>Header</th><th>Waarde</th></tr></thead>
+  <tbody>
+    <tr><td>X-Content-Type-Options</td><td>nosniff</td></tr>
+    <tr><td>X-Frame-Options</td><td>SAMEORIGIN</td></tr>
+    <tr><td>X-XSS-Protection</td><td>1; mode=block</td></tr>
+    <tr><td>Referrer-Policy</td><td>strict-origin-when-cross-origin</td></tr>
+    <tr><td>Permissions-Policy</td><td>Geen camera/microfoon/geolocatie</td></tr>
+    <tr><td>Content-Security-Policy</td><td>Strict (Firebase + PDOK + Google APIs)</td></tr>
+  </tbody>
+</table>
+
+<h3>Deploy-commando's</h3>
+<pre><code># Frontend bouwen en deployen
+npm run build
+firebase deploy --only hosting
+
+# Cloud Functions deployen
+firebase deploy --only functions
+
+# Firestore-regels deployen
+firebase deploy --only firestore:rules
+
+# Alles tegelijk
+firebase deploy</code></pre>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- 17. ONTWIKKELOMGEVING                                           -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2 id="s17">17. Ontwikkelomgeving</h2>
+
+<h3>Vereisten</h3>
+<ul>
+  <li>Node.js (LTS-versie aanbevolen)</li>
+  <li>npm</li>
+  <li>Firebase CLI (<code>npm install -g firebase-tools</code>)</li>
+</ul>
+
+<h3>Installatie</h3>
+<pre><code># Project klonen
+git clone https://github.com/gilmarfegon-oss/mijnfegon-standalone.git
+cd mijnfegon-standalone
+
+# Afhankelijkheden installeren
+npm install
+
+# Cloud Functions afhankelijkheden installeren
+cd functions &amp;&amp; npm install &amp;&amp; cd ..</code></pre>
+
+<h3>Beschikbare scripts</h3>
+<table>
+  <thead><tr><th>Script</th><th>Commando</th><th>Beschrijving</th></tr></thead>
+  <tbody>
+    <tr><td>Ontwikkelmodus</td><td><code>npm run dev</code></td><td>Start Vite dev server (localhost:5173 met HMR)</td></tr>
+    <tr><td>Bouwen</td><td><code>npm run build</code></td><td>Bouwt productieversie naar <code>dist/</code></td></tr>
+    <tr><td>Voorbeeld</td><td><code>npm run preview</code></td><td>Preview van de gebouwde versie</td></tr>
+    <tr><td>Linting</td><td><code>npm run lint</code></td><td>ESLint controle op <code>src/</code></td></tr>
+  </tbody>
+</table>
+
+<h3>Secrets (Cloud Functions)</h3>
+<ul>
+  <li><code>COMPENDA_TOKEN</code> &mdash; API-token voor Compenda</li>
+  <li><code>KVK_API_KEY</code> &mdash; API-sleutel voor KVK-verificatie</li>
+</ul>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- BIJLAGE: FAQ                                                    -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<h2>Bijlage: Veelgestelde vragen</h2>
+
+<h4>Hoe wordt een nieuwe installateur toegevoegd?</h4>
+<ol>
+  <li>De installateur registreert zich via <code>/register</code></li>
+  <li>Na registratie wordt het profiel aangevuld via <code>/profiel-aanvullen</code></li>
+  <li>Na voltooiing ontvangt hij 100 welkomst-Drops en krijgt toegang tot alle functies</li>
+</ol>
+
+<h4>Hoe verdient een installateur Drops?</h4>
+<ul>
+  <li><strong>100 Drops</strong> bij het voltooien van het profiel (eenmalig)</li>
+  <li><strong>50 Drops</strong> per goedgekeurde productregistratie</li>
+  <li><strong>100 Drops</strong> op zijn verjaardag (jaarlijks)</li>
+</ul>
+
+<h4>Wat is het minimale saldo voor de shop?</h4>
+<p>250 Drops. Onder dit bedrag is de shop vergrendeld.</p>
+
+<h4>Hoe werkt de Compenda-synchronisatie?</h4>
+<ol>
+  <li>Het systeem controleert of de installateur al in Compenda staat</li>
+  <li>Zo niet, wordt hij automatisch aangemaakt</li>
+  <li>De registratie wordt naar Compenda verstuurd</li>
+  <li>Het Compenda-ID wordt opgeslagen voor toekomstige referentie</li>
+</ol>
+
+<h4>Hoe kan een gebruiker zijn gegevens exporteren?</h4>
+<p>Via Instellingen &gt; &ldquo;Gegevens exporteren&rdquo;. Er wordt een JSON-bestand gedownload met alle profiel- en registratiegegevens.</p>
+
+<h4>Hoe verwijdert een gebruiker zijn account?</h4>
+<p>Via Instellingen &gt; &ldquo;Account verwijderen&rdquo;. Na het typen van &ldquo;VERWIJDEREN&rdquo; wordt het account verwijderd en de gegevens geanonimiseerd.</p>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- FOOTER                                                          -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<div class="doc-footer">
+  <p><strong>Laatst bijgewerkt:</strong> 23 februari 2026</p>
+  <p>Fegon Nederland &mdash; MijnFegon Installateurportaal</p>
+</div>
+
+</div><!-- .content -->
+</body>
+</html>
