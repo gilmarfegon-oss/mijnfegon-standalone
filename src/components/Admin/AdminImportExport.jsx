@@ -2,58 +2,42 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import AdminLayout from "./AdminLayout";
-
-// Zorg dat deze bestanden bestaan in de map ImportExport
 import IEUsers from "./ImportExport/IEUsers";
 import IERegistrations from "./ImportExport/IERegistrations";
 import IEPoints from "./ImportExport/IEPoints";
+
+const TABS = [
+  { key: "users",         label: "Gebruikers" },
+  { key: "registrations", label: "Registraties" },
+  { key: "points",        label: "Punten" },
+];
 
 export default function AdminImportExport({ user }) {
   const [tab, setTab] = useState("users");
 
   return (
     <AdminLayout user={user}>
-      <h1>📥 Import & Export</h1>
-      <p style={{ color: "#6b7280", marginTop: "0.3rem" }}>
-        Importeer of exporteer gegevens per categorie. Gebruik dit met zorg:
-        wijzigingen hebben direct effect op gebruikers, registraties en punten.
+      <h1 style={s.title}>Import & Export</h1>
+      <p style={s.subtitle}>
+        Importeer of exporteer gegevens per categorie. Geïmporteerde records worden automatisch gemarkeerd zodat je ze kunt onderscheiden van organische aanmeldingen.
       </p>
 
-      {/* SUBMENU / TABS */}
-      <div
-        className="actions-row"
-        style={{ marginTop: "1.2rem", marginBottom: "1.6rem", display: "flex", gap: "10px" }}
-      >
-        <button
-          type="button"
-          style={tab === "users" ? styles.activeBtn : styles.ghostBtn}
-          onClick={() => setTab("users")}
-        >
-          👥 Gebruikers
-        </button>
-
-        <button
-          type="button"
-          style={tab === "registrations" ? styles.activeBtn : styles.ghostBtn}
-          onClick={() => setTab("registrations")}
-        >
-          📄 Registraties
-        </button>
-
-        <button
-          type="button"
-          style={tab === "points" ? styles.activeBtn : styles.ghostBtn}
-          onClick={() => setTab("points")}
-        >
-          ⭐ Punten
-        </button>
+      <div style={s.tabBar}>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            style={{ ...s.tabBtn, ...(tab === t.key ? s.tabBtnActive : {}) }}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* CONTENT: Hier wordt de vernieuwde IEUsers geladen */}
-      <div style={{ marginTop: "20px" }}>
-        {tab === "users" && <IEUsers />}
-        {tab === "registrations" && <IERegistrations />}
-        {tab === "points" && <IEPoints />}
+      <div style={{ marginTop: "1.5rem" }}>
+        {tab === "users" && <IEUsers user={user} />}
+        {tab === "registrations" && <IERegistrations user={user} />}
+        {tab === "points" && <IEPoints user={user} />}
       </div>
     </AdminLayout>
   );
@@ -67,24 +51,10 @@ AdminImportExport.propTypes = {
   }),
 };
 
-// Simpele inline styles om het netjes te houden
-const styles = {
-  activeBtn: {
-    backgroundColor: "#007bff",
-    color: "white",
-    border: "none",
-    padding: "8px 16px",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontWeight: "500"
-  },
-  ghostBtn: {
-    backgroundColor: "transparent",
-    color: "#6b7280",
-    border: "1px solid #d1d5db",
-    padding: "8px 16px",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontWeight: "500"
-  }
+const s = {
+  title: { margin: "0 0 0.3rem", fontSize: "1.5rem", color: "#111827" },
+  subtitle: { color: "#6b7280", fontSize: "0.9rem", marginBottom: "1.2rem" },
+  tabBar: { display: "flex", gap: "0.5rem", flexWrap: "wrap" },
+  tabBtn: { padding: "0.5rem 1rem", borderRadius: 8, border: "1px solid #d1d5db", background: "#fff", color: "#374151", fontSize: "0.85rem", fontWeight: 500, cursor: "pointer", transition: "all 0.15s" },
+  tabBtnActive: { background: "#004aad", color: "#fff", border: "1px solid #004aad" },
 };
