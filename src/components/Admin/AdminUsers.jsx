@@ -11,6 +11,7 @@ import {
   getRegistrationStatusLabel,
   getRegistrationStatusStyle,
 } from "../../utils/statusUtils";
+import { logAdminAction } from "../../adminTools/logAdminAction";
 
 const USERS_PER_PAGE = 25;
 
@@ -124,6 +125,7 @@ export default function AdminUsers({ user }) {
       );
 
       showMelding("Rol bijgewerkt.", "success");
+      logAdminAction({ type: "user_role_change", description: `Gebruiker ${existing?.email || userId} rol gewijzigd van ${oldRole} naar ${newRole}`, collectionName: "users", adminUid: user?.uid, adminEmail: user?.email });
     } catch (err) {
       const msg = err.message || "Kon rol niet bijwerken.";
       console.error("AdminUsers setRole error:", err);

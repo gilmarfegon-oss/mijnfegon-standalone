@@ -26,7 +26,7 @@ export async function logAdminAction({
       collectionName: collectionName || null,
       adminUid,
       adminEmail,
-      timestamp: serverTimestamp(),
+      createdAt: serverTimestamp(),
     });
   } catch (err) {
     console.error("Admin logging mislukt:", err.message);

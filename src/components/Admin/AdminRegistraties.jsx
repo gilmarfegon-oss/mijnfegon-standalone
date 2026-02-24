@@ -17,6 +17,7 @@ import AdminLayout from "./AdminLayout";
 import { formatDate } from "../../utils/dateUtils";
 import { getRegistrationStatusLabel, getRegistrationStatusStyle } from "../../utils/statusUtils";
 import { usePagination } from "../../hooks/usePagination";
+import { logAdminAction } from "../../adminTools/logAdminAction";
 
 // ─── Module-level constants ───────────────────────────────────────────────────
 
@@ -253,6 +254,7 @@ export default function AdminRegistraties({ user }) {
       if (result.data.success) {
         showMelding("Registratie verwerkt in Compenda en punten toegekend.");
         sendApprovalEmails(reg, result.data.compendaId, result.data.points, result.data.isFirstRegistration);
+        logAdminAction({ type: "registration_approve", description: `Registratie ${reg.id} goedgekeurd (${reg.installer_email || "onbekend"})`, collectionName: "registrations", adminUid: user?.uid, adminEmail: user?.email });
       }
     } catch (err) {
       console.error("Compenda Error:", err);
@@ -267,6 +269,7 @@ export default function AdminRegistraties({ user }) {
     try {
       await updateDoc(doc(db, "registrations", reg.id), { status: newStatus });
       showMelding("Status bijgewerkt.");
+      logAdminAction({ type: "registration_status", description: `Registratie ${reg.id} status gewijzigd naar ${newStatus}`, collectionName: "registrations", adminUid: user?.uid, adminEmail: user?.email });
     } catch (err) {
       console.error("Update fout:", err);
       showMelding("Er ging iets mis bij het updaten: " + err.message, "error");
@@ -278,6 +281,7 @@ export default function AdminRegistraties({ user }) {
     try {
       await deleteDoc(doc(db, "registrations", id));
       showMelding("Registratie verwijderd.");
+      logAdminAction({ type: "registration_delete", description: `Registratie ${id} verwijderd`, collectionName: "registrations", adminUid: user?.uid, adminEmail: user?.email });
     } catch (err) {
       console.error("Delete fout:", err);
       showMelding("Verwijderen mislukt: " + err.message, "error");

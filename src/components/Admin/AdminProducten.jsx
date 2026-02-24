@@ -8,6 +8,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AdminLayout from "./AdminLayout";
+import { logAdminAction } from "../../adminTools/logAdminAction";
 
 export default function AdminProducten({ user }) {
   const [producten, setProducten] = useState([]);
@@ -53,6 +54,7 @@ export default function AdminProducten({ user }) {
       await setDoc(doc(db, "settings", "shop_config"), { categories: updatedCats }, { merge: true });
       setNewCategoryName("");
       alert("✅ Categorie toegevoegd");
+      logAdminAction({ type: "category_add", description: `Categorie "${newCategoryName.trim()}" toegevoegd`, collectionName: "settings", adminUid: user?.uid, adminEmail: user?.email });
     } catch (err) {
       alert("Fout bij toevoegen categorie: " + err.message);
     }
@@ -93,8 +95,10 @@ export default function AdminProducten({ user }) {
         });
       }
       setFormData(initialForm);
+      const action = editingId ? "bijgewerkt" : "aangemaakt";
       setEditingId(null);
       alert("✅ Opgeslagen!");
+      logAdminAction({ type: `product_${editingId ? "update" : "create"}`, description: `Product "${formData.name}" ${action}`, collectionName: "products", adminUid: user?.uid, adminEmail: user?.email });
     } catch (err) { alert(err.message); }
   };
 
@@ -172,7 +176,7 @@ export default function AdminProducten({ user }) {
                   <td>{p.points}</td>
                   <td>
                     <button onClick={() => { setEditingId(p.id); setFormData(p); }} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>✏️</button>
-                    <button onClick={() => deleteDoc(doc(db, "products", p.id))} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>🗑️</button>
+                    <button onClick={async () => { await deleteDoc(doc(db, "products", p.id)); logAdminAction({ type: "product_delete", description: `Product "${p.name}" verwijderd`, collectionName: "products", adminUid: user?.uid, adminEmail: user?.email }); }} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>🗑️</button>
                   </td>
                 </tr>
               ))}

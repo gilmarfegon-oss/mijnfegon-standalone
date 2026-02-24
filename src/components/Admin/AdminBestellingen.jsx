@@ -5,6 +5,7 @@ import { db } from "../../firebase";
 import { collection, onSnapshot, doc, updateDoc, getDoc, query, orderBy } from "firebase/firestore";
 import AdminLayout from "./AdminLayout";
 import { usePagination } from "../../hooks/usePagination";
+import { logAdminAction } from "../../adminTools/logAdminAction";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -183,6 +184,7 @@ export default function AdminBestellingen({ user }) {
     try {
       await updateDoc(doc(db, "orders", orderId), { status: newStatus });
       showMelding(`Status bijgewerkt naar "${newStatus}"`);
+      logAdminAction({ type: "order_status", description: `Bestelling ${orderId} status gewijzigd naar "${newStatus}"`, collectionName: "orders", adminUid: user?.uid, adminEmail: user?.email });
     } catch (err) {
       showMelding("Fout: " + err.message, "error");
     }
