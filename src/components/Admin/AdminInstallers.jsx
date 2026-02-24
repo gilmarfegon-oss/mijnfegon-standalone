@@ -6,6 +6,7 @@ import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../../firebase";
 import AdminLayout from "./AdminLayout";
 import { formatDate } from "../../utils/dateUtils";
+import { logAdminAction } from "../../adminTools/logAdminAction";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -252,6 +253,9 @@ export default function AdminInstallers({ user }) {
     setSyncErrors((prev) => { const next = { ...prev }; delete next[targetUser.id]; return next; });
 
     httpsCallable(functions, "syncInstallerToCompenda")({ installerUid: targetUser.id })
+      .then(() => {
+        logAdminAction({ type: "sync_compenda", description: `Installateur ${targetUser.email || targetUser.id} gesynchroniseerd met Compenda`, collectionName: "users", adminUid: user?.uid, adminEmail: user?.email });
+      })
       .catch((err) => {
         console.error("AdminInstallers sync error:", err);
         setSyncErrors((prev) => ({ ...prev, [targetUser.id]: err.message }));
@@ -270,6 +274,8 @@ export default function AdminInstallers({ user }) {
     )) return;
 
     setBulkProgress({ done: 0, total: unsynced.length });
+    let successCount = 0;
+    let failCount = 0;
 
     // Process in concurrent batches of BATCH_SIZE
     for (let i = 0; i < unsynced.length; i += BATCH_SIZE) {
@@ -278,17 +284,19 @@ export default function AdminInstallers({ user }) {
       await Promise.allSettled(
         batch.map((u) =>
           httpsCallable(functions, "syncInstallerToCompenda")({ installerUid: u.id })
-            .then(() => removeProcessing(u.id))
+            .then(() => { removeProcessing(u.id); successCount++; })
             .catch((err) => {
               console.error("Bulk sync error for", u.id, err);
               setSyncErrors((prev) => ({ ...prev, [u.id]: err.message }));
               removeProcessing(u.id);
+              failCount++;
             })
         )
       );
       setBulkProgress((p) => ({ ...p, done: Math.min(i + BATCH_SIZE, unsynced.length) }));
     }
 
+    logAdminAction({ type: "sync_compenda_bulk", description: `Bulk Compenda sync: ${successCount} geslaagd, ${failCount} mislukt van ${unsynced.length} installateurs`, collectionName: "users", adminUid: user?.uid, adminEmail: user?.email });
     setBulkProgress(null);
   };
 

@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { db, functions } from "../../firebase";
 import AdminLayout from "./AdminLayout";
 import { usePagination } from "../../hooks/usePagination";
+import { logAdminAction } from "../../adminTools/logAdminAction";
 
 const USERS_PER_PAGE = 25;
 
@@ -127,10 +128,12 @@ export default function AdminPunten({ user }) {
           u.id === uid ? { ...u, points_total: newTotal, saldo: newSaldo } : u,
         ),
       );
+      const target = users.find((u) => u.id === uid);
       showMelding(
         `${Number(amount) >= 0 ? "+" : ""}${amount} punten toegepast.`,
         "success",
       );
+      logAdminAction({ type: "points_adjust", description: `${Number(amount) >= 0 ? "+" : ""}${amount} punten voor ${target?.email || uid}${reason ? ` (${reason})` : ""}`, collectionName: "users", adminUid: user?.uid, adminEmail: user?.email });
     } catch (err) {
       const msg = err.message || "Kon punten niet aanpassen.";
       showMelding(msg, "error");
